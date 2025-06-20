@@ -38,32 +38,43 @@ def index():
 def quiz():
     if "quiz_file" not in session:
         return redirect(url_for("index"))
-    
-    file_path = os.path.join(UPLOAD_FOLDER, session["quiz_file"])
-    with open(file_path, "r", encoding="utf-8") as f:
-        content = f.read()
-    
-    all_questions = parse_questions(content)
-    filtered = filter_question_range(all_questions, session.get("range"))
-    selected = sample_questions(filtered, session.get("count", 50))
+
+    if "questions" not in session:
+        # 初次載入
+        file_path = os.path.join(UPLOAD_FOLDER, session["quiz_file"])
+        with open(file_path, "r", encoding="utf-8") as f:
+            content = f.read()
+        all_questions = parse_questions(content)
+        filtered = filter_question_range(all_questions, session.get("range"))
+        selected = sample_questions(filtered, session.get("count", 50))
+        session["questions"] = selected
+        session["answers"] = []
+        session["wrong_list"] = []
+        session["current_index"] = 0
+        session["start_time"] = time.time()
+
+    index = session["current_index"]
+    questions = session["questions"]
+    total = len(questions)
 
     if request.method == "POST":
-        answers = request.form
-        correct = 0
-        wrong_list = []
-        for idx, q in enumerate(session["questions"]):
-            user_ans = answers.get(f"q{idx}")
-            if user_ans == q["answer"]:
-                correct += 1
-            else:
-                wrong_list.append(q)
+        user_ans = request.form.get("answer")
+        correct_ans = questions[index]["answer"]
+        if user_ans == correct_ans:
+            session["answers"].append(True)
+        else:
+            session["answers"].append(False)
+            session["wrong_list"].append(questions[index])
 
-        duration = round(time.time() - session["start_time"], 2)
-        return render_template("result.html", correct=correct, total=len(session["questions"]), duration=duration, wrong_list=wrong_list)
+        session["current_index"] += 1
+        if session["current_index"] >= total:
+            return redirect(url_for("result"))
 
-    session["questions"] = selected
-    session["start_time"] = time.time()
-    return render_template("quiz.html", questions=selected)
+        return redirect(url_for("quiz"))
+
+    # 顯示當前題目
+    return render_template("quiz_step.html", q=questions[index], index=index + 1, total=total)
+
 
 @app.route("/reset")
 def reset():
