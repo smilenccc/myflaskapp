@@ -1,19 +1,41 @@
-<!doctype html>
-<html>
-<head>
-    <title>第 {{ index }}/{{ total }} 題</title>
-</head>
-<body>
-    <h2>第 {{ index }} / {{ total }} 題</h2>
-    <form method="post">
-        <p>{{ question.question }}</p>
-        {% for key, value in question.options.items() %}
-        <label>
-            <input type="radio" name="option" value="{{ key }}" required>
-            {{ key }}. {{ value }}
-        </label><br>
-        {% endfor %}
-        <button type="submit">送出答案</button>
-    </form>
-</body>
-</html>
+{% extends 'base.html' %}
+{% block content %}
+<div class="question-box">
+  <h2>題目 {{ current_index + 1 }}/{{ total }}</h2>
+  <form method="POST" action="/quiz">
+    <p class="question-text">{{ question['question'] }}</p>
+    {% for i, option in enumerate(question['options']) %}
+      <div>
+        <input type="radio" name="choice" id="opt{{ i }}" value="{{ ['A','B','C','D'][i] }}">
+        <label for="opt{{ i }}">{{ option }}</label>
+      </div>
+    {% endfor %}
+    <input type="hidden" name="start_time" value="{{ start_time }}">
+    <button type="submit">提交</button>
+  </form>
+</div>
+
+{% if result is defined %}
+<div id="result-box">
+  <p class="result-text">{% if result.correct %}✅ 答對{% else %}❌ 答錯，正確答案是 :{{ result.answer }}{% endif %}</p>
+  <p>作答時間：{{ result.time }} 秒</p>
+</div>
+<script>
+  setTimeout(() => window.location.href = "/quiz", 2000);
+</script>
+{% endif %}
+
+{% if time_limit %}
+<script>
+  let seconds = {{ time_limit }};
+  const timer = setInterval(() => {
+    document.getElementById("timer").innerText = `剩餘時間：${seconds} 秒`;
+    if (--seconds < 0) {
+      clearInterval(timer);
+      document.querySelector("form").submit();
+    }
+  }, 1000);
+</script>
+<div id="timer"></div>
+{% endif %}
+{% endblock %}

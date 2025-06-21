@@ -1,22 +1,31 @@
-<!doctype html>
-<html>
-<head>
-    <title>上傳題庫與選擇</title>
-</head>
-<body>
-    <h1>選擇題庫開始測驗</h1>
-    <form action="/start" method="post">
-        <select name="quiz_file">
-            {% for file in files %}
-            <option value="{{ file }}">{{ file }}</option>
-            {% endfor %}
-        </select>
-        <button type="submit">開始測驗</button>
-    </form>
-    <h2>上傳新的題庫</h2>
-    <form action="/upload" method="post" enctype="multipart/form-data">
-        <input type="file" name="file" />
-        <button type="submit">上傳</button>
-    </form>
-</body>
-</html>
+{% extends 'base.html' %}
+{% block content %}
+<h2>📘 開始測驗</h2>
+<form method="POST" enctype="multipart/form-data">
+  <div>
+    <label>選擇題庫：</label>
+    <select name="quiz_file">
+      {% for file in quiz_files %}
+        <option value="{{ file }}" {% if file == selected_file %}selected{% endif %}>{{ file }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div>
+    <label>出題範圍（如 1-50）：</label>
+    <input type="text" name="range" value="{{ settings.range or '' }}">
+  </div>
+  <div>
+    <label>出題總數：</label>
+    <input type="number" name="total" value="{{ settings.total or 0 }}">
+  </div>
+  <div>
+    <label>每題限時（秒）：</label>
+    <input type="number" name="time_limit" value="{{ settings.time_limit or 0 }}">
+  </div>
+  <div>
+    <label>上傳新題庫：</label>
+    <input type="file" name="file">
+  </div>
+  <button type="submit">開始測驗</button>
+</form>
+{% endblock %}
