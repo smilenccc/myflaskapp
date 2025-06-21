@@ -1,122 +1,111 @@
+from flask import Flask, render_template, request, redirect, session, url_for
 import os
 import random
 import time
-from flask import Flask, render_template, request, redirect, url_for, session, send_from_directory
-from utils import parse_quiz_file, sample_questions, format_time
+from utils import parse_quiz_file, format_time
 
 app = Flask(__name__)
-app.secret_key = 'quiz_secret_key'
+app.secret_key = 'your_secret_key'
+
 UPLOAD_FOLDER = 'uploads'
-os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
-@app.route('/', methods=['GET', 'POST'])
+def get_quiz_files():
+    return [f for f in os.listdir(UPLOAD_FOLDER) if f.endswith('.txt')]
+
+@app.route('/')
 def index():
-    quiz_files = [f for f in os.listdir(UPLOAD_FOLDER) if f.endswith('.txt')]
+    quiz_files = get_quiz_files()
+    settings = {
+        "range": "",
+        "count": "",
+        "time_limit": ""
+    }
+    return render_template('index.html', quiz_files=quiz_files, settings=settings)
 
-    if request.method == 'POST':
-        uploaded_file = request.files.get('quizfile')
-        if uploaded_file and uploaded_file.filename.endswith('.txt'):
-            path = os.path.join(UPLOAD_FOLDER, uploaded_file.filename)
-            uploaded_file.save(path)
-            selected_file = uploaded_file.filename
-        else:
-            selected_file = request.form.get('selected_file')
-
-        q_range = request.form.get('range', '').strip()
-        q_total = request.form.get('total', '').strip()
-        q_limit = request.form.get('limit', '').strip()
-
-        session['selected_file'] = selected_file
-        session['q_range'] = q_range
-        session['q_total'] = int(q_total) if q_total else None
-        session['q_limit'] = int(q_limit) if q_limit else None
-
-        return redirect(url_for('start_quiz'))
-
-    return render_template('index.html', quiz_files=quiz_files)
-
-@app.route('/start')
+@app.route('/start', methods=['POST'])
 def start_quiz():
-    selected_file = session.get('selected_file')
-    q_range = session.get('q_range')
-    q_total = session.get('q_total')
-    q_limit = session.get('q_limit')
+    quiz_file = request.form['quiz_file']
+    range_setting = request.form.get('range', '')
+    count_setting = request.form.get('count', '')
+    time_limit = request.form.get('time_limit', '')
 
-    if not selected_file:
-        return redirect(url_for('index'))
+    filepath = os.path.join(app.config['UPLOAD_FOLDER'], quiz_file)
+    questions = parse_quiz_file(filepath)
 
-    path = os.path.join(UPLOAD_FOLDER, selected_file)
-    with open(path, encoding='utf-8') as f:
-        raw_text = f.read()
+    # 範圍設定
+    if range_setting:
+        try:
+            start, end = map(int, range_setting.split('-'))
+            questions = questions[start - 1:end]
+        except:
+            pass
 
-    all_questions = parse_quiz_file(raw_text)
-    questions = sample_questions(all_questions, q_range, q_total)
+    # 題數限制
+    if count_setting:
+        try:
+            count = int(count_setting)
+            questions = random.sample(questions, min(count, len(questions)))
+        except:
+            pass
+    else:
+        random.shuffle(questions)
 
     session['questions'] = questions
     session['current'] = 0
-    session['score'] = 0
+    session['correct'] = 0
     session['start_time'] = time.time()
-    session['wrong'] = []
+    session['per_question_start'] = time.time()
+    session['results'] = []
 
-    return redirect(url_for('quiz'))
+    return redirect(url_for('question'))
 
-@app.route('/quiz', methods=['GET', 'POST'])
-def quiz():
-    questions = session.get('questions', [])
-    current = session.get('current', 0)
-    q_limit = session.get('q_limit')
-
-    if current >= len(questions):
-        return redirect(url_for('result'))
-
+@app.route('/question', methods=['GET', 'POST'])
+def question():
     if request.method == 'POST':
         selected = request.form.get('answer')
-        elapsed = float(request.form.get('elapsed', 0))
+        current = session.get('current', 0)
+        questions = session['questions']
+        correct_answer = questions[current]['answer']
+        elapsed = int(time.time() - session.get('per_question_start', time.time()))
 
-        correct = questions[current]['answer']
-        if selected == correct:
-            session['score'] += 1
-            correct_flag = True
-        else:
-            correct_flag = False
-            session['wrong'].append(questions[current])
+        is_correct = (selected == correct_answer)
+        if is_correct:
+            session['correct'] += 1
+
+        session['results'].append({
+            'index': current + 1,
+            'selected': selected,
+            'correct': correct_answer,
+            'is_correct': is_correct,
+            'time': elapsed
+        })
 
         session['current'] += 1
 
-        return render_template('feedback.html',
-                               correct=correct_flag,
-                               correct_answer=correct,
-                               explanation=questions[current - 1]['question'],
-                               time_used=format_time(elapsed),
-                               next_url=url_for('quiz'))
+        if session['current'] >= len(questions):
+            return redirect(url_for('result'))
 
-    question = questions[current]
-    return render_template('quiz_step.html',
-                           index=current + 1,
-                           total=len(questions),
-                           question=question,
-                           time_limit=q_limit)
+        return render_template('feedback.html',
+                               is_correct=is_correct,
+                               correct_answer=correct_answer,
+                               time=elapsed)
+
+    current = session.get('current', 0)
+    questions = session.get('questions', [])
+    if current >= len(questions):
+        return redirect(url_for('result'))
+
+    session['per_question_start'] = time.time()
+    q = questions[current]
+    return render_template('quiz_step.html', question=q, index=current + 1, total=len(questions))
 
 @app.route('/result')
 def result():
+    total_time = int(time.time() - session.get('start_time', time.time()))
+    correct = session.get('correct', 0)
     total = len(session.get('questions', []))
-    score = session.get('score', 0)
-    duration = time.time() - session.get('start_time', time.time())
-    wrong = session.get('wrong', [])
-
-    # 記錄錯誤題目
-    if wrong:
-        with open('quiz_result.txt', 'w', encoding='utf-8') as f:
-            for q in wrong:
-                f.write(q['question'] + '\n')
-                for opt in q['options']:
-                    f.write(opt + '\n')
-                f.write('\n')
-
-    return render_template('result.html',
-                           score=score,
-                           total=total,
-                           duration=format_time(duration))
+    return render_template('result.html', correct=correct, total=total, total_time=total_time)
 
 if __name__ == '__main__':
     app.run(debug=True)
