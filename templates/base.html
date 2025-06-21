@@ -1,0 +1,21 @@
+<!-- templates/base.html -->
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <title>📝 測驗系統</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    body { font-family: "Segoe UI", sans-serif; margin: 20px; }
+    h1, h2 { color: #333; }
+    form { margin-top: 20px; }
+    .correct { color: green; font-weight: bold; }
+    .incorrect { color: red; font-weight: bold; }
+    .timer { font-size: 18px; color: darkblue; margin-bottom: 10px; }
+  </style>
+</head>
+<body>
+  <h1>📚 測驗系統</h1>
+  {% block content %}{% endblock %}
+</body>
+</html>
