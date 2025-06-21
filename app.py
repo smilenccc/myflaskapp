@@ -33,6 +33,9 @@ def start_quiz():
     filepath = os.path.join(app.config['UPLOAD_FOLDER'], quiz_file)
     questions = parse_quiz_file(filepath)
 
+    if not questions:
+        return "<h3>⚠️ 題庫無法解析或為空，請確認檔案格式。</h3><a href='/'>返回首頁</a>"
+
     # 範圍設定
     if range_setting:
         try:
@@ -56,6 +59,7 @@ def start_quiz():
     session['correct'] = 0
     session['start_time'] = time.time()
     session['per_question_start'] = time.time()
+    session['time_limit'] = int(time_limit) if time_limit.isdigit() else 0
     session['results'] = []
 
     return redirect(url_for('question'))
@@ -98,7 +102,11 @@ def question():
 
     session['per_question_start'] = time.time()
     q = questions[current]
-    return render_template('quiz_step.html', question=q, index=current + 1, total=len(questions))
+    return render_template('quiz_step.html',
+                           question=q,
+                           index=current + 1,
+                           total=len(questions),
+                           time_limit=session.get('time_limit', 0))
 
 @app.route('/result')
 def result():
@@ -106,6 +114,13 @@ def result():
     correct = session.get('correct', 0)
     total = len(session.get('questions', []))
     return render_template('result.html', correct=correct, total=total, total_time=total_time)
+
+@app.route('/upload', methods=['POST'])
+def upload_file():
+    file = request.files['file']
+    if file and file.filename.endswith('.txt'):
+        file.save(os.path.join(app.config['UPLOAD_FOLDER'], file.filename))
+    return redirect(url_for('index'))
 
 if __name__ == '__main__':
     app.run(debug=True)
