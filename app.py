@@ -1,103 +1,80 @@
 from flask import Flask, render_template, request, redirect, url_for, session
-from werkzeug.utils import secure_filename
 import os
 import time
-from utils import parse_questions, filter_question_range, sample_questions
+from utils import parse_questions
 
 app = Flask(__name__)
 app.secret_key = "your_secret_key"
-UPLOAD_FOLDER = "uploads"
-ALLOWED_EXTENSIONS = {"txt"}
-app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
-
-if not os.path.exists(UPLOAD_FOLDER):
-    os.makedirs(UPLOAD_FOLDER)
-
-def allowed_file(filename):
-    return "." in filename and filename.rsplit(".", 1)[1].lower() in ALLOWED_EXTENSIONS
 
 @app.route("/", methods=["GET", "POST"])
 def index():
-    message = ""
-    quiz_files = [f for f in os.listdir(UPLOAD_FOLDER) if f.endswith(".txt")]
     if request.method == "POST":
-        if "file" in request.files:
-            file = request.files["file"]
-            if file.filename and allowed_file(file.filename):
-                filename = secure_filename(file.filename)
-                file.save(os.path.join(app.config["UPLOAD_FOLDER"], filename))
-                message = "✅ 上傳成功：" + filename
-        elif "quiz_file" in request.form:
-            session["quiz_file"] = request.form["quiz_file"]
-            session["range"] = request.form.get("range")
-            session["count"] = int(request.form.get("count", 50))
+        uploaded_file = request.files.get("quizfile")
+        if uploaded_file and uploaded_file.filename.endswith(".txt"):
+            text = uploaded_file.read().decode("utf-8")
+            questions = parse_questions(text)
+            if not questions:
+                return "解析失敗，請確認題庫格式", 400
+            session["questions"] = questions
+            session["current_index"] = 0
+            session["correct_count"] = 0
+            session["start_time"] = time.time()
+            session["wrong_list"] = []
+            session["question_start"] = time.time()
             return redirect(url_for("quiz"))
-    return render_template("index.html", quiz_files=quiz_files, message=message)
+        return "請上傳 .txt 題庫檔案"
+    return render_template("index.html")
 
 @app.route("/quiz", methods=["GET", "POST"])
 def quiz():
-    if "quiz_file" not in session:
+    if "questions" not in session:
         return redirect(url_for("index"))
 
-    if "questions" not in session:
-        file_path = os.path.join(UPLOAD_FOLDER, session["quiz_file"])
-        with open(file_path, "r", encoding="utf-8") as f:
-            content = f.read()
-        all_questions = parse_questions(content)
-        filtered = filter_question_range(all_questions, session.get("range"))
-        selected = sample_questions(filtered, session.get("count", 50))
-        session["questions"] = selected
-        session["answers"] = []
-        session["wrong_list"] = []
-        session["current_index"] = 0
-        session["start_time"] = time.time()
-
-    index = session["current_index"]
     questions = session["questions"]
-    total = len(questions)
-
     feedback = None
     time_used = None
-    correct_ans = None
 
     if request.method == "POST":
-        user_ans = request.form.get("answer")
-        q = questions[index]
-        correct_ans = q["answer"]
-        time_used = round(time.time() - session.get("question_start", time.time()), 2)
-
-        is_correct = user_ans == correct_ans
-        session["answers"].append(is_correct)
-        if not is_correct:
+        selected = request.form.get("answer")
+        q_index = session["current_index"]
+        q = questions[q_index]
+        correct = q["answer"]
+        if selected == correct:
+            session["correct_count"] += 1
+            feedback = "正確！"
+        else:
+            feedback = f"錯誤，正確答案是 {correct}：{q['options']['ABCD'.index(correct)][3:].strip()}"
             session["wrong_list"].append(q)
-
-        feedback = "✅ 答對！" if is_correct else f"❌ 答錯！正確答案是：({correct_ans}) {next((opt for opt in q['options'] if opt.startswith(f'({correct_ans})')), '')}"
+        time_used = round(time.time() - session["question_start"], 2)
         session["current_index"] += 1
 
-        if session["current_index"] >= total:
-            return redirect(url_for("result"))
+    if session["current_index"] >= len(questions):
+        return redirect(url_for("result"))
 
-    q = questions[session["current_index"]]
-    session["question_start"] = time.time()
+    current_index = session["current_index"]
+    q = questions[current_index if feedback is None else current_index - 1]
+    if feedback is None:
+        session["question_start"] = time.time()
+
     return render_template("quiz_step.html",
                            q=q,
-                           index=session["current_index"] + 1,
+                           index=(current_index if feedback is None else current_index),
                            total=len(questions),
                            feedback=feedback,
                            time_used=time_used)
 
 @app.route("/result")
 def result():
-    correct = sum(session["answers"])
-    total = len(session["answers"])
-    duration = round(time.time() - session["start_time"], 2)
-    wrong_list = session.get("wrong_list", [])
-    return render_template("result.html", correct=correct, total=total, duration=duration, wrong_list=wrong_list)
+    correct = session.get("correct_count", 0)
+    total = len(session.get("questions", []))
+    duration = round(time.time() - session.get("start_time", time.time()), 2)
+    return render_template("result.html",
+                           correct=correct,
+                           total=total,
+                           duration=duration,
+                           wrong_list=session.get("wrong_list", []))
 
 @app.route("/reset")
 def reset():
     session.clear()
     return redirect(url_for("index"))
-
-if __name__ == "__main__":
-    app.run(debug=True)

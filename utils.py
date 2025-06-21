@@ -2,57 +2,35 @@ import re
 import random
 
 def parse_questions(text):
-    pattern = r"\([A-D]\)\d+\..*?(?=(\n\([A-D]\)\d+\.|\Z))"
-    matches = re.finditer(pattern, text, re.DOTALL)
+    blocks = text.strip().split("\n\n")
     questions = []
-    for match in matches:
-        full_match = match.group(0).strip()
-        lines = full_match.split("\n")
-        first_line = lines[0]
-        options = lines[1:]
-        correct_match = re.match(r"\(([A-D])\)(\d+\..+)", first_line)
-        if not correct_match:
+
+    for block in blocks:
+        lines = block.strip().split("\n")
+        if len(lines) < 6:
             continue
-        correct_option = correct_match.group(1)
-        question_text = correct_match.group(2)
+
+        answer_line = lines[0].strip()
+        match = re.match(r"\(答案\)([A-D])", answer_line)
+        if not match:
+            continue
+        answer = match.group(1)
+
+        question_line = lines[1].strip()
+        question_match = re.match(r"(\d+)[\.\、．](.*)", question_line)
+        if question_match:
+            question_text = question_match.group(2).strip()
+        else:
+            question_text = question_line
+
+        options = lines[2:6]
+        if not all(opt.startswith(("(A)", "(B)", "(C)", "(D)")) for opt in options):
+            continue
+
         questions.append({
-            "question": question_text.strip(),
+            "question": question_text,
             "options": options,
-            "answer": correct_option,
-            "full": full_match
+            "answer": answer
         })
+
     return questions
-
-def filter_question_range(questions, range_str):
-    if not range_str:
-        return questions
-    match = re.match(r"(\d+)\s*[-~]\s*(\d+)", range_str)
-    if not match:
-        return questions
-    start, end = int(match.group(1)), int(match.group(2))
-    filtered = []
-    for q in questions:
-        match_num = re.match(r"(\d+)\.", q["question"])
-        if match_num:
-            q_num = int(match_num.group(1))
-            if start <= q_num <= end:
-                filtered.append(q)
-    return filtered
-
-def sample_questions(questions, target_count=50):
-    if not questions:
-        return []
-    total = len(questions)
-    group_size = total // target_count
-    remainder = total % target_count
-    sampled = []
-    i = 0
-    for _ in range(target_count - 1):
-        block = questions[i:i + group_size]
-        if block:
-            sampled.append(random.choice(block))
-        i += group_size
-    block = questions[i:]
-    if block:
-        sampled.append(random.choice(block))
-    return sampled
