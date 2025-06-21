@@ -40,7 +40,6 @@ def quiz():
         return redirect(url_for("index"))
 
     if "questions" not in session:
-        # 初次載入
         file_path = os.path.join(UPLOAD_FOLDER, session["quiz_file"])
         with open(file_path, "r", encoding="utf-8") as f:
             content = f.read()
@@ -57,24 +56,43 @@ def quiz():
     questions = session["questions"]
     total = len(questions)
 
+    feedback = None
+    time_used = None
+    correct_ans = None
+
     if request.method == "POST":
         user_ans = request.form.get("answer")
-        correct_ans = questions[index]["answer"]
-        if user_ans == correct_ans:
-            session["answers"].append(True)
-        else:
-            session["answers"].append(False)
-            session["wrong_list"].append(questions[index])
+        q = questions[index]
+        correct_ans = q["answer"]
+        time_used = round(time.time() - session.get("question_start", time.time()), 2)
 
+        is_correct = user_ans == correct_ans
+        session["answers"].append(is_correct)
+        if not is_correct:
+            session["wrong_list"].append(q)
+
+        feedback = "✅ 答對！" if is_correct else f"❌ 答錯！正確答案是：({correct_ans}) {next((opt for opt in q['options'] if opt.startswith(f'({correct_ans})')), '')}"
         session["current_index"] += 1
+
         if session["current_index"] >= total:
             return redirect(url_for("result"))
 
-        return redirect(url_for("quiz"))
+    q = questions[session["current_index"]]
+    session["question_start"] = time.time()
+    return render_template("quiz_step.html",
+                           q=q,
+                           index=session["current_index"] + 1,
+                           total=len(questions),
+                           feedback=feedback,
+                           time_used=time_used)
 
-    # 顯示當前題目
-    return render_template("quiz_step.html", q=questions[index], index=index + 1, total=total)
-
+@app.route("/result")
+def result():
+    correct = sum(session["answers"])
+    total = len(session["answers"])
+    duration = round(time.time() - session["start_time"], 2)
+    wrong_list = session.get("wrong_list", [])
+    return render_template("result.html", correct=correct, total=total, duration=duration, wrong_list=wrong_list)
 
 @app.route("/reset")
 def reset():

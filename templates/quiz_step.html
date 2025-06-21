@@ -3,19 +3,28 @@
 <head>
     <meta charset="utf-8">
     <title>單題測驗</title>
+    {% if feedback %}
+        <meta http-equiv="refresh" content="2;URL={{ url_for('quiz') }}">
+    {% endif %}
 </head>
 <body>
-    <h1>📖 第 {{ index }} / {{ total }} 題</h1>
+    <h1>📖 題目 {{ index }} / {{ total }}</h1>
 
-    <form method="post">
-        <p><strong>{{ q.question }}</strong></p>
-        {% for opt in q.options %}
-            <label>
-                <input type="radio" name="answer" value="{{ opt[1] }}" required> {{ opt }}
-            </label><br>
-        {% endfor %}
-        <br>
-        <button type="submit">提交並進入下一題</button>
-    </form>
+    {% if feedback %}
+        <p><strong>{{ feedback }}</strong></p>
+        <p>🕒 本題作答時間：{{ time_used }} 秒</p>
+        <p>👉 2 秒後自動跳到下一題...</p>
+    {% else %}
+        <form method="post">
+            <p><strong>{{ q.question }}</strong></p>
+            {% for opt in q.options %}
+                <label>
+                    <input type="radio" name="answer" value="{{ opt[1] }}" required> {{ opt }}
+                </label><br>
+            {% endfor %}
+            <br>
+            <button type="submit">提交</button>
+        </form>
+    {% endif %}
 </body>
 </html>
