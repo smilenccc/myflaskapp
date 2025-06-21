@@ -1,36 +1,29 @@
 import re
-import random
 
-def parse_questions(text):
-    blocks = text.strip().split("\n\n")
-    questions = []
+def parse_quiz_file(filepath):
+    with open(filepath, 'r', encoding='utf-8') as f:
+        text = f.read()
 
-    for block in blocks:
-        lines = block.strip().split("\n")
-        if len(lines) < 6:
-            continue
+    pattern = r'\(答案([A-D])\)(\d+)\.?(.+?)\n\((A\).+?)\n\((B\).+?)\n\((C\).+?)\n\((D\).+?)\n'
+    matches = re.findall(pattern, text, re.DOTALL)
 
-        answer_line = lines[0].strip()
-        match = re.match(r"\(答案\)([A-D])", answer_line)
-        if not match:
-            continue
-        answer = match.group(1)
-
-        question_line = lines[1].strip()
-        question_match = re.match(r"(\d+)[\.\、．](.*)", question_line)
-        if question_match:
-            question_text = question_match.group(2).strip()
-        else:
-            question_text = question_line
-
-        options = lines[2:6]
-        if not all(opt.startswith(("(A)", "(B)", "(C)", "(D)")) for opt in options):
-            continue
-
-        questions.append({
-            "question": question_text,
-            "options": options,
-            "answer": answer
+    quiz = []
+    for ans, number, question, a, b, c, d in matches:
+        quiz.append({
+            'id': int(number),
+            'question': question.strip(),
+            'options': {
+                'A': a[2:].strip(),
+                'B': b[2:].strip(),
+                'C': c[2:].strip(),
+                'D': d[2:].strip()
+            },
+            'answer': ans
         })
 
-    return questions
+    return quiz
+
+def format_time(seconds):
+    minutes = int(seconds // 60)
+    seconds = int(seconds % 60)
+    return f"{minutes:02d}:{seconds:02d}"
