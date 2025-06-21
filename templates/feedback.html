@@ -1,1 +1,13 @@
-...
+<!doctype html>
+<html>
+<head>
+    <meta http-equiv="refresh" content="2;url={{ url_for('next') }}">
+    <title>結果</title>
+</head>
+<body>
+    <h2>{{ '✔️ 正確' if result.is_correct else '❌ 錯誤' }}</h2>
+    <p>正確答案：{{ result.correct }}. {{ result.correct_text }}</p>
+    <p>作答時間：{{ result.time }}</p>
+    <p>2 秒後自動跳至下一題...</p>
+</body>
+</html>

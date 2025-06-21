@@ -1,1 +1,20 @@
-...
+<!doctype html>
+<html>
+<head>
+    <title>測驗結果</title>
+</head>
+<body>
+    <h1>測驗結束</h1>
+    <h2>總共答對：{{ score }} 題 / {{ results|length }}</h2>
+    <ol>
+        {% for r in results %}
+        <li>
+            <strong>{{ r.question }}</strong><br>
+            你選的是：{{ r.selected }} {% if r.is_correct %}✔️{% else %}❌ 正解：{{ r.correct }}{% endif %}<br>
+            作答時間：{{ r.time }}
+        </li>
+        {% endfor %}
+    </ol>
+    <a href="{{ url_for('index') }}">回首頁</a>
+</body>
+</html>

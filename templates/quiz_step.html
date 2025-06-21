@@ -1,1 +1,19 @@
-...
+<!doctype html>
+<html>
+<head>
+    <title>第 {{ index }}/{{ total }} 題</title>
+</head>
+<body>
+    <h2>第 {{ index }} / {{ total }} 題</h2>
+    <form method="post">
+        <p>{{ question.question }}</p>
+        {% for key, value in question.options.items() %}
+        <label>
+            <input type="radio" name="option" value="{{ key }}" required>
+            {{ key }}. {{ value }}
+        </label><br>
+        {% endfor %}
+        <button type="submit">送出答案</button>
+    </form>
+</body>
+</html>
