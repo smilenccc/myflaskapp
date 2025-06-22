@@ -1,14 +1,17 @@
 from flask import Flask, render_template, request, redirect, url_for, session
-import os
-import re
-import random
+from flask_session import Session
+import os, re, random
 
 app = Flask(__name__)
 app.secret_key = 'your_secret_key_here'
+
+# 使用伺服器端儲存 session
+app.config['SESSION_TYPE'] = 'filesystem'
+Session(app)
+
 UPLOAD_FOLDER = './uploads'
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
-# 從test50.py複製而來的parse_questions函數
 def parse_questions(text):
     pattern = r"\([A-D]\)\d+\..*?(?=(\n\([A-D]\)\d+\.|\Z))"
     matches = re.finditer(pattern, text, re.DOTALL)
