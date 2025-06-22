@@ -1,13 +1,13 @@
 <!DOCTYPE html>
 <html lang="zh">
-<head><meta charset="UTF-8"><title>作答回饋</title></head>
+<head><meta charset="UTF-8"><title>作答結果</title></head>
 <body>
 {% if feedback.is_correct %}
 <h3 style="color:green;">✅ 正確！</h3>
 {% else %}
 <h3 style="color:red;">❌ 錯誤！</h3>
-<p>你選擇的答案：{{ feedback.selected_answer }}</p>
-<p>正確答案是：{{ feedback.correct_answer }}</p>
+<p>你的答案：{{ feedback.selected_answer }}</p>
+<p>正確答案：{{ feedback.correct_answer }}</p>
 {% endif %}
 <p>作答時間：{{ feedback.answer_time }} 秒</p>
 <a href="{{ url_for('quiz') }}">下一題</a>

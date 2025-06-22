@@ -1,13 +1,17 @@
 <!DOCTYPE html>
 <html lang="zh">
-<head><meta charset="UTF-8"><title>測驗中</title></head>
+<head>
+    <meta charset="UTF-8">
+    <title>測驗中</title>
+</head>
 <body>
 <h3>第 {{ current }}/{{ total }} 題：{{ question.question }}</h3>
+{% if time_limit > 0 %}
+<p>限時：{{ time_limit }} 秒</p>
+{% endif %}
 <form method="post">
     {% for opt in question.options %}
-    <div>
-        <input type="radio" name="answer" value="{{ opt[1] }}" required> {{ opt }}
-    </div>
+    <div><input type="radio" name="answer" value="{{ opt[1] }}" required>{{ opt }}</div>
     {% endfor %}
     <button type="submit">提交答案</button>
 </form>
