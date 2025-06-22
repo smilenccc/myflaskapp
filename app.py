@@ -5,7 +5,7 @@ import os, re, random, time
 app = Flask(__name__)
 app.secret_key = 'temporary_testing_key'
 
-# 伺服器端Session設定
+# Session 存於伺服器端
 app.config['SESSION_TYPE'] = 'filesystem'
 Session(app)
 
@@ -35,17 +35,25 @@ def parse_questions(text):
 
 @app.route('/', methods=['GET', 'POST'])
 def index():
+    uploaded_files = os.listdir(UPLOAD_FOLDER)
+    
     if request.method == 'POST':
+        # 選擇已上傳題庫或上傳新題庫
+        selected_file = request.form.get('selected_file')
         file = request.files.get('quizfile')
-        if file:
+
+        if file and file.filename:
             filepath = os.path.join(UPLOAD_FOLDER, file.filename)
             file.save(filepath)
-            with open(filepath, encoding='utf-8') as f:
-                questions = parse_questions(f.read())
+        elif selected_file:
+            filepath = os.path.join(UPLOAD_FOLDER, selected_file)
         else:
-            return render_template('index.html', error='請上傳題庫檔案！')
+            return render_template('index.html', files=uploaded_files, error='請選擇或上傳題庫！')
 
-        # 處理使用者設定
+        with open(filepath, encoding='utf-8') as f:
+            questions = parse_questions(f.read())
+
+        # 讀取使用者其他設定
         q_range = request.form.get('q_range', '').strip()
         q_count = int(request.form.get('q_count', 50))
         time_limit = int(request.form.get('time_limit', 0))
@@ -68,7 +76,7 @@ def index():
 
         return redirect(url_for('quiz'))
 
-    return render_template('index.html')
+    return render_template('index.html', files=uploaded_files)
 
 @app.route('/quiz', methods=['GET', 'POST'])
 def quiz():

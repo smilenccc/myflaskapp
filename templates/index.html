@@ -2,16 +2,26 @@
 <html lang="zh">
 <head>
     <meta charset="UTF-8">
-    <title>設定測驗</title>
+    <title>測驗初始設定</title>
 </head>
 <body>
 <h2>測驗初始設定</h2>
+
 <form method="post" enctype="multipart/form-data">
-    <p>上傳題庫檔案 (*.txt)：<input type="file" name="quizfile" required></p>
+    <h3>上傳新題庫檔案：</h3>
+    <input type="file" name="quizfile">
+
+    <h3>或選擇已上傳的題庫：</h3>
+    {% for file in files %}
+    <div><input type="radio" name="selected_file" value="{{file}}"> {{file}}</div>
+    {% endfor %}
+
+    <h3>其他設定：</h3>
     <p>出題範圍 (如1-50)：<input type="text" name="q_range" placeholder="全部"></p>
     <p>出題總數量：<input type="number" name="q_count" value="50"></p>
     <p>每題限時（秒，0表示不限）：<input type="number" name="time_limit" value="0"></p>
     <button type="submit">開始測驗</button>
+
     {% if error %}<p style="color:red;">{{ error }}</p>{% endif %}
 </form>
 </body>
