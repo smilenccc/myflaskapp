@@ -1,14 +1,14 @@
 <!DOCTYPE html>
 <html lang="zh">
-<head>
-    <meta charset="UTF-8">
-    <title>上傳題庫並開始測驗</title>
-</head>
+<head><meta charset="UTF-8"><title>開始測驗</title></head>
 <body>
-    <h2>上傳題庫檔案（.txt）並開始測驗</h2>
-    <form method="post" enctype="multipart/form-data">
-        <input type="file" name="quizfile" required>
-        <button type="submit">開始測驗</button>
-    </form>
+<h2>上傳題庫開始測驗</h2>
+<form method="post" enctype="multipart/form-data">
+    <input type="file" name="quizfile" required>
+    <button type="submit">開始測驗</button>
+    {% if error %}
+    <p style="color:red;">{{ error }}</p>
+    {% endif %}
+</form>
 </body>
 </html>
