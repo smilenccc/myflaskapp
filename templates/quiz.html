@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <title>測驗中...</title>
+</head>
+<body>
+    <h3>第 {{ current }}/{{ total }} 題：{{ question.question }}</h3>
+    <form method="post">
+        {% for opt in question.options %}
+        <div>
+            <input type="radio" name="answer" value="{{ opt[1] }}" required>
+            {{ opt }}
+        </div>
+        {% endfor %}
+        <button type="submit">下一題</button>
+    </form>
+</body>
+</html>

@@ -1,49 +1,14 @@
-{% extends 'base.html' %}
-{% block content %}
-<h1>📘 測驗系統</h1>
-
-<h2>🟦 開始測驗</h2>
-
-<form method="POST" action="/start">
-  <label for="quiz_file">選擇題庫：</label>
-  <select name="quiz_file" id="quiz_file" required>
-    {% for file in quiz_files %}
-      <option value="{{ file }}">{{ file }}</option>
-    {% endfor %}
-  </select>
-  <br><br>
-
-  <label for="range">出題範圍（如 1-50）：</label>
-  <input type="text" name="range" value="{{ settings.range or '' }}">
-  <br><br>
-
-  <label for="count">出題總數：</label>
-  <input type="number" name="count" min="1" value="{{ settings.count or '' }}">
-  <br><br>
-
-  <label for="time_limit">每題限時（秒）：</label>
-  <input type="number" name="time_limit" min="0" value="{{ settings.time_limit or '' }}">
-  <br><br>
-
-  <button type="submit">開始測驗</button>
-</form>
-
-<hr>
-
-<h2>📤 上傳題庫（.txt）</h2>
-<form action="/upload" method="POST" enctype="multipart/form-data">
-  <input type="file" name="file" accept=".txt" required>
-  <button type="submit">上傳</button>
-</form>
-
-<h2>🗃️ 現有題庫</h2>
-{% if quiz_files %}
-  <ul>
-    {% for file in quiz_files %}
-      <li>{{ file }}</li>
-    {% endfor %}
-  </ul>
-{% else %}
-  <p>尚無題庫，請先上傳。</p>
-{% endif %}
-{% endblock %}
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <title>上傳題庫並開始測驗</title>
+</head>
+<body>
+    <h2>上傳題庫檔案（.txt）並開始測驗</h2>
+    <form method="post" enctype="multipart/form-data">
+        <input type="file" name="quizfile" required>
+        <button type="submit">開始測驗</button>
+    </form>
+</body>
+</html>

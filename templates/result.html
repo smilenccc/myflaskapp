@@ -1,7 +1,12 @@
-{% extends 'base.html' %}
-{% block content %}
-<h2>🎉 測驗完成</h2>
-<p>總共 {{ total }} 題，答對 {{ correct }} 題。</p>
-<p>總作答時間：{{ total_time }} 秒</p>
-<a href="/">🔄 再次測驗</a>
-{% endblock %}
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <title>測驗結果</title>
+</head>
+<body>
+    <h2>測驗完成！</h2>
+    <p>你的成績為：{{ correct }}/{{ total }}（{{ (correct/total)*100 }}%）</p>
+    <a href="{{ url_for('index') }}">回首頁重新測驗</a>
+</body>
+</html>

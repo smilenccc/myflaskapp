@@ -1,126 +1,71 @@
-from flask import Flask, render_template, request, redirect, session, url_for
+from flask import Flask, render_template, request, redirect, url_for, session
 import os
+import re
 import random
-import time
-from utils import parse_quiz_file, format_time
 
 app = Flask(__name__)
-app.secret_key = 'your_secret_key'
+app.secret_key = 'your_secret_key_here'
+UPLOAD_FOLDER = './uploads'
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
-UPLOAD_FOLDER = 'uploads'
-app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+# 從test50.py複製而來的parse_questions函數
+def parse_questions(text):
+    pattern = r"\([A-D]\)\d+\..*?(?=(\n\([A-D]\)\d+\.|\Z))"
+    matches = re.finditer(pattern, text, re.DOTALL)
+    questions = []
+    for match in matches:
+        full_match = match.group(0).strip()
+        lines = full_match.split("\n")
+        first_line = lines[0]
+        options = lines[1:]
+        correct_match = re.match(r"\(([A-D])\)(\d+\..+)", first_line)
+        if correct_match:
+            correct_option = correct_match.group(1)
+            question_text = correct_match.group(2)
+            questions.append({
+                "question": question_text.strip(),
+                "options": options,
+                "answer": correct_option,
+                "full": full_match
+            })
+    return questions
 
-def get_quiz_files():
-    return [f for f in os.listdir(UPLOAD_FOLDER) if f.endswith('.txt')]
-
-@app.route('/')
+@app.route('/', methods=['GET', 'POST'])
 def index():
-    quiz_files = get_quiz_files()
-    settings = {
-        "range": "",
-        "count": "",
-        "time_limit": ""
-    }
-    return render_template('index.html', quiz_files=quiz_files, settings=settings)
-
-@app.route('/start', methods=['POST'])
-def start_quiz():
-    quiz_file = request.form['quiz_file']
-    range_setting = request.form.get('range', '')
-    count_setting = request.form.get('count', '')
-    time_limit = request.form.get('time_limit', '')
-
-    filepath = os.path.join(app.config['UPLOAD_FOLDER'], quiz_file)
-    questions = parse_quiz_file(filepath)
-
-    if not questions:
-        return "<h3>⚠️ 題庫無法解析或為空，請確認檔案格式。</h3><a href='/'>返回首頁</a>"
-
-    # 範圍設定
-    if range_setting:
-        try:
-            start, end = map(int, range_setting.split('-'))
-            questions = questions[start - 1:end]
-        except:
-            pass
-
-    # 題數限制
-    if count_setting:
-        try:
-            count = int(count_setting)
-            questions = random.sample(questions, min(count, len(questions)))
-        except:
-            pass
-    else:
-        random.shuffle(questions)
-
-    session['questions'] = questions
-    session['current'] = 0
-    session['correct'] = 0
-    session['start_time'] = time.time()
-    session['per_question_start'] = time.time()
-    session['time_limit'] = int(time_limit) if time_limit.isdigit() else 0
-    session['results'] = []
-
-    return redirect(url_for('question'))
-
-@app.route('/question', methods=['GET', 'POST'])
-def question():
     if request.method == 'POST':
-        selected = request.form.get('answer')
-        current = session.get('current', 0)
-        questions = session['questions']
-        correct_answer = questions[current]['answer']
-        elapsed = int(time.time() - session.get('per_question_start', time.time()))
+        file = request.files['quizfile']
+        if file:
+            filepath = os.path.join(UPLOAD_FOLDER, file.filename)
+            file.save(filepath)
+            with open(filepath, encoding='utf-8') as f:
+                session['questions'] = parse_questions(f.read())
+                random.shuffle(session['questions'])
+            session['current'] = 0
+            session['correct'] = 0
+            return redirect(url_for('quiz'))
+    return render_template('index.html')
 
-        is_correct = (selected == correct_answer)
-        if is_correct:
-            session['correct'] += 1
-
-        session['results'].append({
-            'index': current + 1,
-            'selected': selected,
-            'correct': correct_answer,
-            'is_correct': is_correct,
-            'time': elapsed
-        })
-
-        session['current'] += 1
-
-        if session['current'] >= len(questions):
-            return redirect(url_for('result'))
-
-        return render_template('feedback.html',
-                               is_correct=is_correct,
-                               correct_answer=correct_answer,
-                               time=elapsed)
-
-    current = session.get('current', 0)
-    questions = session.get('questions', [])
-    if current >= len(questions):
+@app.route('/quiz', methods=['GET', 'POST'])
+def quiz():
+    if 'questions' not in session or session['current'] >= len(session['questions']):
         return redirect(url_for('result'))
 
-    session['per_question_start'] = time.time()
-    q = questions[current]
-    return render_template('quiz_step.html',
-                           question=q,
-                           index=current + 1,
-                           total=len(questions),
-                           time_limit=session.get('time_limit', 0))
+    q = session['questions'][session['current']]
+
+    if request.method == 'POST':
+        answer = request.form.get('answer')
+        if answer == q['answer']:
+            session['correct'] += 1
+        session['current'] += 1
+        return redirect(url_for('quiz'))
+
+    return render_template('quiz.html', question=q, current=session['current']+1, total=len(session['questions']))
 
 @app.route('/result')
 def result():
-    total_time = int(time.time() - session.get('start_time', time.time()))
     correct = session.get('correct', 0)
     total = len(session.get('questions', []))
-    return render_template('result.html', correct=correct, total=total, total_time=total_time)
-
-@app.route('/upload', methods=['POST'])
-def upload_file():
-    file = request.files['file']
-    if file and file.filename.endswith('.txt'):
-        file.save(os.path.join(app.config['UPLOAD_FOLDER'], file.filename))
-    return redirect(url_for('index'))
+    return render_template('result.html', correct=correct, total=total)
 
 if __name__ == '__main__':
     app.run(debug=True)
