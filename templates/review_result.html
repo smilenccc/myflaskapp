@@ -2,7 +2,7 @@
 <html lang="zh">
 <head>
     <meta charset="UTF-8">
-    <title>測驗結果</title>
+    <title>複習完成</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <style>
         body {
@@ -23,24 +23,21 @@
 
         h2 {
             font-size: 1.8rem;
-            color: #28a745;
+            color: #17a2b8;
         }
 
         p {
             font-size: 1.2rem;
-            margin: 8px 0;
         }
 
         a {
             display: inline-block;
+            margin-top: 20px;
             padding: 10px 20px;
-            margin: 10px 10px 0 10px;
             background-color: #007bff;
             color: white;
             text-decoration: none;
             border-radius: 5px;
-            max-width: 100%;
-            box-sizing: border-box;
         }
 
         a:hover {
@@ -51,26 +48,15 @@
             body { padding: 10px; }
             h2 { font-size: 1.5rem; }
             p { font-size: 1rem; }
-            a {
-                display: block;
-                width: calc(100% - 40px);
-                margin: 10px auto 0 auto;
-            }
+            a { width: 100%; box-sizing: border-box; display: block; margin: 20px auto 0 auto; }
         }
     </style>
 </head>
 <body>
 <div class="container">
-    <h2>測驗完成！🎉</h2>
-    <p>總題數：<strong>{{ total }}</strong></p>
-    <p>答對題數：<strong>{{ correct }}</strong></p>
-    <p>錯題數：<strong>{{ wrong }}</strong></p>
-    <p>正確率：<strong>{{ "%.2f"|format((correct/total)*100) }}%</strong></p>
-    <p>總花費時間：<strong>{{ total_time }} 秒</strong></p>
-    <a href="{{ url_for('index') }}">重新測驗</a>
-    {% if wrong > 0 %}
-    <a href="{{ url_for('review') }}">錯題複習</a>
-    {% endif %}
+    <h2>錯題複習完成 🎯</h2>
+    <p>你已完成所有錯誤題目的複習。</p>
+    <a href="{{ url_for('index') }}">回到首頁</a>
 </div>
 </body>
 </html>

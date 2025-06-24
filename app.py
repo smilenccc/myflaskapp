@@ -55,37 +55,35 @@ def index():
         else:
             return render_template('index.html', files=uploaded_files, error='請上傳或選擇格式正確的 [解析] 題庫檔案（.txt）')
 
-        # 題庫解析
         try:
             with open(filepath, encoding='utf-8') as f:
                 questions = parse_questions(f.read())
         except Exception as e:
             return render_template('index.html', files=uploaded_files, error=f'讀取題庫失敗：{e}')
 
-        # 出題範圍、數量、時限處理
         q_range = request.form.get('q_range', '').strip()
         q_count = int(request.form.get('q_count', 50))
         time_limit = int(request.form.get('time_limit', 0))
 
         if q_range:
-            match = re.match(r'(\\d+)\\s*[-~]\\s*(\\d+)', q_range)
+            match = re.match(r'(\d+)\s*[-~]\s*(\d+)', q_range)
             if match:
                 start, end = int(match.group(1)), int(match.group(2))
                 questions = [
                     q for q in questions
-                    if start <= int(re.match(r'(\\d+)\\.', q['question']).group(1)) <= end
+                    if start <= int(re.match(r'(\d+)\.', q['question']).group(1)) <= end
                 ]
 
         random.shuffle(questions)
         questions = questions[:q_count]
 
-        # 建立 session 狀態
         session['questions'] = questions
         session['current'] = 0
         session['correct'] = 0
         session['wrong_list'] = []
         session['start_time'] = time.time()
         session['time_limit'] = time_limit
+        session['review_mode'] = False
 
         return redirect(url_for('quiz'))
 
@@ -94,6 +92,8 @@ def index():
 @app.route('/quiz', methods=['GET', 'POST'])
 def quiz():
     if 'questions' not in session or session['current'] >= len(session['questions']):
+        if session.get('review_mode'):
+            return redirect(url_for('review_result'))
         return redirect(url_for('result'))
 
     q = session['questions'][session['current']]
@@ -104,7 +104,7 @@ def quiz():
         is_correct = selected == q['answer']
         if is_correct:
             session['correct'] += 1
-        else:
+        elif not session.get('review_mode', False):
             session['wrong_list'].append(q)
 
         session['feedback'] = {
@@ -145,6 +145,24 @@ def result():
                            total=total,
                            wrong=len(wrong_list),
                            total_time=total_time)
+
+@app.route('/review')
+def review():
+    wrong_list = session.get('wrong_list', [])
+    if not wrong_list:
+        return redirect(url_for('result'))
+
+    session['questions'] = wrong_list
+    session['current'] = 0
+    session['correct'] = 0
+    session['review_mode'] = True
+    session['start_time'] = time.time()
+
+    return redirect(url_for('quiz'))
+
+@app.route('/review_result')
+def review_result():
+    return render_template('review_result.html')
 
 if __name__ == '__main__':
     app.run(debug=True)
