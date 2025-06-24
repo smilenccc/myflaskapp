@@ -39,6 +39,8 @@
             color: white;
             text-decoration: none;
             border-radius: 5px;
+            max-width: 100%;
+            box-sizing: border-box;
         }
 
         a:hover {
@@ -49,7 +51,10 @@
             body { padding: 10px; }
             h2 { font-size: 1.5rem; }
             p { font-size: 1rem; }
-            a { width: 100%; }
+            a {
+                width: calc(100% - 40px); /* 考量容器 padding 調整寬度 */
+                margin: 20px auto 0 auto; /* 水平置中 */
+            }
         }
     </style>
 </head>
