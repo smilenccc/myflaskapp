@@ -3,26 +3,77 @@
 <head>
     <meta charset="UTF-8">
     <title>測驗初始設定</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            background-color: #f8f9fa;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: auto;
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.2);
+        }
+
+        h2, h3 {
+            color: #333;
+        }
+
+        input[type="text"], input[type="number"], input[type="file"] {
+            width: 100%;
+            padding: 8px;
+            margin-bottom: 10px;
+            border-radius: 5px;
+            border: 1px solid #ccc;
+        }
+
+        button {
+            width: 100%;
+            padding: 10px;
+            color: white;
+            background-color: #28a745;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background-color: #218838;
+        }
+
+        @media (max-width: 600px) {
+            body {
+                padding: 10px;
+            }
+        }
+    </style>
 </head>
 <body>
-<h2>測驗初始設定</h2>
+<div class="container">
+    <h2>測驗初始設定</h2>
 
-<form method="post" enctype="multipart/form-data">
-    <h3>上傳新題庫檔案：</h3>
-    <input type="file" name="quizfile">
+    <form method="post" enctype="multipart/form-data">
+        <h3>上傳新題庫檔案：</h3>
+        <input type="file" name="quizfile">
 
-    <h3>或選擇已上傳的題庫：</h3>
-    {% for file in files %}
-    <div><input type="radio" name="selected_file" value="{{file}}"> {{file}}</div>
-    {% endfor %}
+        <h3>或選擇已上傳的題庫：</h3>
+        {% for file in files %}
+        <div><input type="radio" name="selected_file" value="{{file}}"> {{file}}</div>
+        {% endfor %}
 
-    <h3>其他設定：</h3>
-    <p>出題範圍 (如1-50)：<input type="text" name="q_range" placeholder="全部"></p>
-    <p>出題總數量：<input type="number" name="q_count" value="50"></p>
-    <p>每題限時（秒，0表示不限）：<input type="number" name="time_limit" value="0"></p>
-    <button type="submit">開始測驗</button>
+        <h3>其他設定：</h3>
+        <input type="text" name="q_range" placeholder="出題範圍（如1-50）">
+        <input type="number" name="q_count" value="50" placeholder="出題總數量">
+        <input type="number" name="time_limit" value="0" placeholder="每題限時（秒，0表示不限）">
 
-    {% if error %}<p style="color:red;">{{ error }}</p>{% endif %}
-</form>
+        <button type="submit">開始測驗</button>
+        {% if error %}<p style="color:red;">{{ error }}</p>{% endif %}
+    </form>
+</div>
 </body>
 </html>

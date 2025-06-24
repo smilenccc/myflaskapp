@@ -1,15 +1,67 @@
 <!DOCTYPE html>
 <html lang="zh">
-<head><meta charset="UTF-8"><title>作答結果</title></head>
+<head>
+    <meta charset="UTF-8">
+    <title>作答結果</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            background-color: #f8f9fa;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: auto;
+            padding: 20px;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.2);
+            text-align: center;
+        }
+
+        h3 {
+            font-size: 1.5rem;
+        }
+
+        p {
+            font-size: 1.2rem;
+        }
+
+        a {
+            display: inline-block;
+            padding: 10px 20px;
+            margin-top: 15px;
+            background-color: #007bff;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+        }
+
+        a:hover {
+            background-color: #0056b3;
+        }
+
+        @media (max-width: 600px) {
+            body { padding: 10px; }
+            h3 { font-size: 1.3rem; }
+            p { font-size: 1rem; }
+            a { width: 100%; }
+        }
+    </style>
+</head>
 <body>
-{% if feedback.is_correct %}
-<h3 style="color:green;">✅ 正確！</h3>
-{% else %}
-<h3 style="color:red;">❌ 錯誤！</h3>
-<p>你的答案：{{ feedback.selected_answer }}</p>
-<p>正確答案：{{ feedback.correct_answer }}</p>
-{% endif %}
-<p>作答時間：{{ feedback.answer_time }} 秒</p>
-<a href="{{ url_for('quiz') }}">下一題</a>
+<div class="container">
+    {% if feedback.is_correct %}
+    <h3 style="color:green;">✅ 正確！</h3>
+    {% else %}
+    <h3 style="color:red;">❌ 錯誤！</h3>
+    <p>你的答案：<strong>{{ feedback.selected_answer }}</strong></p>
+    <p>正確答案：<strong>{{ feedback.correct_answer }}</strong></p>
+    {% endif %}
+    <p>作答時間：{{ feedback.answer_time }} 秒</p>
+    <a href="{{ url_for('quiz') }}">下一題</a>
+</div>
 </body>
 </html>

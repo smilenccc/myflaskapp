@@ -1,13 +1,67 @@
 <!DOCTYPE html>
 <html lang="zh">
-<head><meta charset="UTF-8"><title>測驗結果</title></head>
+<head>
+    <meta charset="UTF-8">
+    <title>測驗結果</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            background-color: #f8f9fa;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: auto;
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.2);
+            text-align: center;
+        }
+
+        h2 {
+            font-size: 1.8rem;
+            color: #28a745;
+        }
+
+        p {
+            font-size: 1.2rem;
+            margin: 8px 0;
+        }
+
+        a {
+            display: inline-block;
+            padding: 10px 20px;
+            margin-top: 20px;
+            background-color: #007bff;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+        }
+
+        a:hover {
+            background-color: #0056b3;
+        }
+
+        @media (max-width: 600px) {
+            body { padding: 10px; }
+            h2 { font-size: 1.5rem; }
+            p { font-size: 1rem; }
+            a { width: 100%; }
+        }
+    </style>
+</head>
 <body>
-<h2>測驗完成！🎉</h2>
-<p>總題數：{{ total }}</p>
-<p>答對題數：{{ correct }}</p>
-<p>錯題數：{{ wrong }}</p>
-<p>正確率：{{ (correct/total)*100 }}%</p>
-<p>總花費時間：{{ total_time }} 秒</p>
-<a href="{{ url_for('index') }}">重新測驗</a>
+<div class="container">
+    <h2>測驗完成！🎉</h2>
+    <p>總題數：<strong>{{ total }}</strong></p>
+    <p>答對題數：<strong>{{ correct }}</strong></p>
+    <p>錯題數：<strong>{{ wrong }}</strong></p>
+    <p>正確率：<strong>{{ "%.2f"|format((correct/total)*100) }}%</strong></p>
+    <p>總花費時間：<strong>{{ total_time }} 秒</strong></p>
+    <a href="{{ url_for('index') }}">重新測驗</a>
+</div>
 </body>
 </html>
