@@ -2,7 +2,7 @@
 <html lang="zh">
 <head>
     <meta charset="UTF-8">
-    <title>複習完成</title>
+    <title>錯題複習結果</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <style>
         body {
@@ -10,7 +10,6 @@
             padding: 20px;
             background-color: #f8f9fa;
         }
-
         .container {
             max-width: 800px;
             margin: auto;
@@ -20,43 +19,37 @@
             box-shadow: 0 0 10px rgba(0,0,0,0.2);
             text-align: center;
         }
-
         h2 {
+            color: #28a745;
             font-size: 1.8rem;
-            color: #17a2b8;
         }
-
-        p {
-            font-size: 1.2rem;
-        }
-
         a {
             display: inline-block;
-            margin-top: 20px;
             padding: 10px 20px;
+            margin-top: 20px;
             background-color: #007bff;
             color: white;
             text-decoration: none;
             border-radius: 5px;
         }
-
         a:hover {
             background-color: #0056b3;
         }
-
         @media (max-width: 600px) {
-            body { padding: 10px; }
             h2 { font-size: 1.5rem; }
-            p { font-size: 1rem; }
-            a { width: 100%; box-sizing: border-box; display: block; margin: 20px auto 0 auto; }
+            a { width: 100%; box-sizing: border-box; }
         }
     </style>
 </head>
 <body>
 <div class="container">
-    <h2>錯題複習完成 🎯</h2>
-    <p>你已完成所有錯誤題目的複習。</p>
-    <a href="{{ url_for('index') }}">回到首頁</a>
+    {% if wrong > 0 %}
+        <h2>還有 {{ wrong }} 題錯誤，請繼續複習</h2>
+        <a href="{{ url_for('review') }}">繼續重答錯題</a>
+    {% else %}
+        <h2>✅ 恭喜！所有錯題都答對了！</h2>
+    {% endif %}
+    <a href="{{ url_for('index') }}">回首頁</a>
 </div>
 </body>
 </html>
