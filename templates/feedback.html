@@ -60,8 +60,8 @@
         <h3 class="correct">✅ 正確！</h3>
     {% else %}
         <h3 class="wrong">❌ 錯誤！</h3>
-        <p>你的答案：<span class="wrong">{{ feedback.selected_text }}</span></p>
-        <p>正確答案：<span class="correct">{{ feedback.correct_text }}</span></p>
+        <p>你的答案：<span class="wrong">{{ feedback.selected_answer }}</span></p>
+        <p>正確答案：<span class="correct">{{ feedback.correct_answer }}</span></p>
     {% endif %}
     <p>作答時間：<strong>{{ feedback.answer_time }} 秒</strong></p>
     <a href="{{ url_for('quiz') }}">下一題</a>

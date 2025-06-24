@@ -100,6 +100,15 @@ def quiz():
         selected_text = next((opt for opt in q['options'] if opt.startswith(f"({selected})")), "未選擇")
         correct_text = next((opt for opt in q['options'] if opt.startswith(f"({q['answer']})")), "未知")
 
+        # 記錄 feedback
+        session['feedback'] = {
+            'is_correct': is_correct,
+            'correct_answer': correct_text,
+            'selected_answer': selected_text,
+            'answer_time': answer_time
+        }
+
+        # 記錄錯誤題
         if session['mode'] == 'normal':
             if is_correct:
                 session['correct'] += 1
@@ -107,15 +116,7 @@ def quiz():
                 session['wrong_list'].append(q)
         else:  # review mode
             if not is_correct:
-                session['wrong_list'].append(q)  # 錯的保留，對的就消除
-            # 正確就不保留
-
-        session['feedback'] = {
-            'is_correct': is_correct,
-            'correct_answer': correct_text,
-            'selected_answer': selected_text,
-            'answer_time': answer_time
-        }
+                session['wrong_list'].append(q)
 
         session['current'] += 1
         return redirect(url_for('feedback'))
