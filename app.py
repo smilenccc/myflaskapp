@@ -170,7 +170,9 @@ def review():
 
 @app.route('/review_result')
 def review_result():
+    wrong_list = session.get('wrong_list', [])
     return render_template('review_result.html', wrong=len(wrong_list))
+
 
 if __name__ == '__main__':
     app.run(debug=True)
