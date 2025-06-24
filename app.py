@@ -4,8 +4,6 @@ import os, re, random, time
 
 app = Flask(__name__)
 app.secret_key = 'temporary_testing_key'
-
-# Session 設定
 app.config['SESSION_TYPE'] = 'filesystem'
 Session(app)
 
@@ -45,8 +43,6 @@ def index():
         file = request.files.get('quizfile')
 
         filepath = None
-
-        # 優先使用上傳的檔案
         if file and file.filename.endswith('.txt') and '[解析]' in file.filename:
             filepath = os.path.join(UPLOAD_FOLDER, file.filename)
             file.save(filepath)
@@ -83,7 +79,7 @@ def index():
         session['wrong_list'] = []
         session['start_time'] = time.time()
         session['time_limit'] = time_limit
-        session['review_mode'] = False
+        session['mode'] = 'normal'
 
         return redirect(url_for('quiz'))
 
@@ -92,9 +88,7 @@ def index():
 @app.route('/quiz', methods=['GET', 'POST'])
 def quiz():
     if 'questions' not in session or session['current'] >= len(session['questions']):
-        if session.get('review_mode'):
-            return redirect(url_for('review_result'))
-        return redirect(url_for('result'))
+        return redirect(url_for('result' if session['mode'] == 'normal' else 'review_result'))
 
     q = session['questions'][session['current']]
 
@@ -103,24 +97,25 @@ def quiz():
         answer_time = round(time.time() - session.get('question_start_time', time.time()), 2)
         is_correct = selected == q['answer']
 
-        # 找出完整的選項內容
-        selected_text = next((opt for opt in q['options'] if opt.startswith(f"({selected})")), "（無）")
-        correct_text = next((opt for opt in q['options'] if opt.startswith(f"({q['answer']})")), "（無）")
+        selected_text = next((opt for opt in q['options'] if opt.startswith(f"({selected})")), "未選擇")
+        correct_text = next((opt for opt in q['options'] if opt.startswith(f"({q['answer']})")), "未知")
 
-        if is_correct:
-            session['correct'] += 1
-        elif not session.get('review_mode', False):
-            session['wrong_list'].append(q)
+        if session['mode'] == 'normal':
+            if is_correct:
+                session['correct'] += 1
+            else:
+                session['wrong_list'].append(q)
+        else:  # review mode
+            if not is_correct:
+                session['wrong_list'].append(q)  # 錯的保留，對的就消除
+            # 正確就不保留
 
         session['feedback'] = {
             'is_correct': is_correct,
-            'correct_answer': q['answer'],
-            'selected_answer': selected,
-            'correct_text': correct_text,
-            'selected_text': selected_text,
+            'correct_answer': correct_text,
+            'selected_answer': selected_text,
             'answer_time': answer_time
         }
-
 
         session['current'] += 1
         return redirect(url_for('feedback'))
@@ -128,7 +123,7 @@ def quiz():
     session['question_start_time'] = time.time()
     return render_template('quiz.html',
                            question=q,
-                           current=session['current']+1,
+                           current=session['current'] + 1,
                            total=len(session['questions']),
                            time_limit=session.get('time_limit', 0))
 
@@ -162,17 +157,15 @@ def review():
 
     session['questions'] = wrong_list
     session['current'] = 0
-    session['correct'] = 0
-    session['review_mode'] = True
+    session['wrong_list'] = []
+    session['mode'] = 'review'
     session['start_time'] = time.time()
-
     return redirect(url_for('quiz'))
 
 @app.route('/review_result')
 def review_result():
     wrong_list = session.get('wrong_list', [])
     return render_template('review_result.html', wrong=len(wrong_list))
-
 
 if __name__ == '__main__':
     app.run(debug=True)
