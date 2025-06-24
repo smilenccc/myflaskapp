@@ -102,6 +102,11 @@ def quiz():
         selected = request.form.get('answer')
         answer_time = round(time.time() - session.get('question_start_time', time.time()), 2)
         is_correct = selected == q['answer']
+
+        # 找出完整的選項內容
+        selected_text = next((opt for opt in q['options'] if opt.startswith(f"({selected})")), "（無）")
+        correct_text = next((opt for opt in q['options'] if opt.startswith(f"({q['answer']})")), "（無）")
+
         if is_correct:
             session['correct'] += 1
         elif not session.get('review_mode', False):
@@ -111,8 +116,11 @@ def quiz():
             'is_correct': is_correct,
             'correct_answer': q['answer'],
             'selected_answer': selected,
+            'correct_text': correct_text,
+            'selected_text': selected_text,
             'answer_time': answer_time
         }
+
 
         session['current'] += 1
         return redirect(url_for('feedback'))
