@@ -5,7 +5,7 @@ import os, re, random, time
 app = Flask(__name__)
 app.secret_key = 'temporary_testing_key'
 
-# Session 存於伺服器端
+# Session 設定
 app.config['SESSION_TYPE'] = 'filesystem'
 Session(app)
 
@@ -35,38 +35,51 @@ def parse_questions(text):
 
 @app.route('/', methods=['GET', 'POST'])
 def index():
-    uploaded_files = os.listdir(UPLOAD_FOLDER)
-    
+    uploaded_files = sorted([
+        f for f in os.listdir(UPLOAD_FOLDER)
+        if f.endswith('.txt') and '[解析]' in f
+    ])
+
     if request.method == 'POST':
-        # 選擇已上傳題庫或上傳新題庫
         selected_file = request.form.get('selected_file')
         file = request.files.get('quizfile')
 
-        if file and file.filename:
+        filepath = None
+
+        # 優先使用上傳的檔案
+        if file and file.filename.endswith('.txt') and '[解析]' in file.filename:
             filepath = os.path.join(UPLOAD_FOLDER, file.filename)
             file.save(filepath)
-        elif selected_file:
+        elif selected_file and selected_file.endswith('.txt') and '[解析]' in selected_file:
             filepath = os.path.join(UPLOAD_FOLDER, selected_file)
         else:
-            return render_template('index.html', files=uploaded_files, error='請選擇或上傳題庫！')
+            return render_template('index.html', files=uploaded_files, error='請上傳或選擇格式正確的 [解析] 題庫檔案（.txt）')
 
-        with open(filepath, encoding='utf-8') as f:
-            questions = parse_questions(f.read())
+        # 題庫解析
+        try:
+            with open(filepath, encoding='utf-8') as f:
+                questions = parse_questions(f.read())
+        except Exception as e:
+            return render_template('index.html', files=uploaded_files, error=f'讀取題庫失敗：{e}')
 
-        # 讀取使用者其他設定
+        # 出題範圍、數量、時限處理
         q_range = request.form.get('q_range', '').strip()
         q_count = int(request.form.get('q_count', 50))
         time_limit = int(request.form.get('time_limit', 0))
 
         if q_range:
-            match = re.match(r'(\d+)\s*[-~]\s*(\d+)', q_range)
+            match = re.match(r'(\\d+)\\s*[-~]\\s*(\\d+)', q_range)
             if match:
                 start, end = int(match.group(1)), int(match.group(2))
-                questions = [q for q in questions if start <= int(re.match(r'(\d+)\.', q["question"]).group(1)) <= end]
+                questions = [
+                    q for q in questions
+                    if start <= int(re.match(r'(\\d+)\\.', q['question']).group(1)) <= end
+                ]
 
         random.shuffle(questions)
         questions = questions[:q_count]
 
+        # 建立 session 狀態
         session['questions'] = questions
         session['current'] = 0
         session['correct'] = 0
@@ -105,12 +118,15 @@ def quiz():
         return redirect(url_for('feedback'))
 
     session['question_start_time'] = time.time()
-    return render_template('quiz.html', question=q, current=session['current']+1, total=len(session['questions']), time_limit=session.get('time_limit', 0))
+    return render_template('quiz.html',
+                           question=q,
+                           current=session['current']+1,
+                           total=len(session['questions']),
+                           time_limit=session.get('time_limit', 0))
 
 @app.route('/feedback')
 def feedback():
-    feedback = session.get('feedback', {})
-    return render_template('feedback.html', feedback=feedback)
+    return render_template('feedback.html', feedback=session.get('feedback', {}))
 
 @app.route('/result')
 def result():
@@ -118,12 +134,17 @@ def result():
     correct = session.get('correct', 0)
     total = len(session.get('questions', []))
     wrong_list = session.get('wrong_list', [])
+
     if wrong_list:
         with open('quiz_result.txt', 'w', encoding='utf-8') as f:
             for q in wrong_list:
                 f.write(q['full'] + '\n\n')
 
-    return render_template('result.html', correct=correct, total=total, total_time=total_time, wrong=len(wrong_list))
+    return render_template('result.html',
+                           correct=correct,
+                           total=total,
+                           wrong=len(wrong_list),
+                           total_time=total_time)
 
 if __name__ == '__main__':
     app.run(debug=True)

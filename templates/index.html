@@ -24,17 +24,32 @@
             color: #333;
         }
 
-        input[type="text"], input[type="number"], input[type="file"] {
+        input[type="text"],
+        input[type="number"],
+        input[type="file"] {
             width: 100%;
             padding: 8px;
-            margin-bottom: 10px;
+            margin-bottom: 15px;
             border-radius: 5px;
             border: 1px solid #ccc;
+            font-size: 1rem;
+        }
+
+        label {
+            display: block;
+            font-weight: bold;
+            margin-top: 10px;
+            margin-bottom: 5px;
+        }
+
+        .radio-option {
+            margin: 5px 0;
         }
 
         button {
             width: 100%;
-            padding: 10px;
+            padding: 12px;
+            font-size: 1.1rem;
             color: white;
             background-color: #28a745;
             border: none;
@@ -58,21 +73,34 @@
     <h2>測驗初始設定</h2>
 
     <form method="post" enctype="multipart/form-data">
-        <h3>上傳新題庫檔案：</h3>
-        <input type="file" name="quizfile">
-
-        <h3>或選擇已上傳的題庫：</h3>
+        <h3>選擇已上傳的題庫：</h3>
         {% for file in files %}
-        <div><input type="radio" name="selected_file" value="{{file}}"> {{file}}</div>
+            {% if '[解析]' in file and file.endswith('.txt') %}
+            <div class="radio-option">
+                <label><input type="radio" name="selected_file" value="{{ file }}"> {{ file }}</label>
+            </div>
+            {% endif %}
         {% endfor %}
 
+        <h3>或上傳新的題庫檔案：</h3>
+        <label for="quizfile">上傳新題庫檔案：</label>
+        <input type="file" name="quizfile" id="quizfile">
+
         <h3>其他設定：</h3>
-        <input type="text" name="q_range" placeholder="出題範圍（如1-50）">
-        <input type="number" name="q_count" value="50" placeholder="出題總數量">
-        <input type="number" name="time_limit" value="0" placeholder="每題限時（秒，0表示不限）">
+        <label for="q_range">出題範圍（例如：1-50，從上到下依順序切題）</label>
+        <input type="text" name="q_range" id="q_range">
+
+        <label for="q_count">出題總數（例如：50，從範圍中抽幾題）</label>
+        <input type="number" name="q_count" id="q_count" value="50">
+
+        <label for="time_limit">每題限時（秒，0 表示不限時間）</label>
+        <input type="number" name="time_limit" id="time_limit" value="0">
 
         <button type="submit">開始測驗</button>
-        {% if error %}<p style="color:red;">{{ error }}</p>{% endif %}
+
+        {% if error %}
+        <p style="color:red;">{{ error }}</p>
+        {% endif %}
     </form>
 </div>
 </body>
