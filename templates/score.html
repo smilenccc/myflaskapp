@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <title>{{ username }} 的成績紀錄</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; background-color: #f8f9fa; }
+        .container {
+            max-width: 900px;
+            margin: auto;
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+        h2 { text-align: center; margin-bottom: 20px; }
+
+        table {
+            border-collapse: collapse;
+            width: 100%;
+            font-size: 1rem;
+        }
+        th, td {
+            padding: 10px;
+            border: 1px solid #ccc;
+            text-align: center;
+        }
+        th {
+            background-color: #f1f1f1;
+            cursor: pointer;
+        }
+        th:hover {
+            background-color: #e1e1e1;
+        }
+
+        @media (max-width: 600px) {
+            table, thead, tbody, th, td, tr {
+                display: block;
+            }
+            thead tr {
+                display: none;
+            }
+            td {
+                position: relative;
+                padding-left: 50%;
+                text-align: left;
+            }
+            td::before {
+                position: absolute;
+                top: 10px;
+                left: 10px;
+                font-weight: bold;
+                white-space: nowrap;
+            }
+            td:nth-of-type(1)::before { content: "題庫"; }
+            td:nth-of-type(2)::before { content: "成績"; }
+            td:nth-of-type(3)::before { content: "總題數"; }
+            td:nth-of-type(4)::before { content: "正確率"; }
+            td:nth-of-type(5)::before { content: "作答時間(秒)"; }
+            td:nth-of-type(6)::before { content: "完成時間"; }
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h2>{{ username }} 的成績紀錄</h2>
+    {% if records %}
+    <table id="scoreTable">
+        <thead>
+            <tr>
+                <th onclick="sortTable(0)">題庫</th>
+                <th onclick="sortTable(1)">成績</th>
+                <th onclick="sortTable(2)">總題數</th>
+                <th onclick="sortTable(3)">正確率 (%)</th>
+                <th onclick="sortTable(4)">作答時間(秒)</th>
+                <th onclick="sortTable(5)">完成時間</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for r in records %}
+            <tr>
+                <td>{{ r.quizfile }}</td>
+                <td>{{ r.score }}</td>
+                <td>{{ r.total }}</td>
+                <td>{{ r.accuracy }}</td>
+                <td>{{ r.time_used }}</td>
+                <td>{{ r.timestamp }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <p>尚無成績紀錄。</p>
+    {% endif %}
+</div>
+
+<script>
+function sortTable(n) {
+    const table = document.getElementById("scoreTable");
+    let rows = Array.from(table.rows).slice(1);
+    const dir = table.getAttribute("data-sort-dir") === "desc" ? "asc" : "desc";
+    rows.sort((a, b) => {
+        let x = a.cells[n].innerText;
+        let y = b.cells[n].innerText;
+        let xNum = parseFloat(x);
+        let yNum = parseFloat(y);
+        if (!isNaN(xNum) && !isNaN(yNum)) {
+            return dir === "asc" ? xNum - yNum : yNum - xNum;
+        }
+        return dir === "asc" ? x.localeCompare(y) : y.localeCompare(x);
+    });
+    for (let i = 0; i < rows.length; i++) {
+        table.tBodies[0].appendChild(rows[i]);
+    }
+    table.setAttribute("data-sort-dir", dir);
+}
+</script>
+</body>
+</html>

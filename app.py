@@ -1,15 +1,14 @@
-# app.py
+# app.py with 成績紀錄功能 + 錯題紀錄 + 登入控制
 from flask import Flask, render_template, request, redirect, url_for, session
 from flask_session import Session
-import os, re, random, time
+import os, re, random, time, datetime, json
+from werkzeug.utils import secure_filename
 
 app = Flask(__name__)
-app.secret_key = 'temporary_testing_key'
+app.secret_key = 'secretkey'
 app.config['SESSION_TYPE'] = 'filesystem'
+app.config['UPLOAD_FOLDER'] = '.'
 Session(app)
-
-UPLOAD_FOLDER = './uploads'
-os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
 USERS = {
     'smile': {'password': 'smile', 'role': 'admin'},
@@ -17,38 +16,23 @@ USERS = {
     'smile2': {'password': '123', 'role': 'user'}
 }
 
-def parse_questions(text):
-    pattern = r"\([A-D]\)\d+\..*?(?=(\n\([A-D]\)\d+\.|\Z))"
-    matches = re.finditer(pattern, text, re.DOTALL)
-    questions = []
-    for match in matches:
-        full_match = match.group(0).strip()
-        lines = full_match.split("\n")
-        first_line = lines[0]
-        options = lines[1:]
-        correct_match = re.match(r"\(([A-D])\)(\d+\..+)", first_line)
-        if correct_match:
-            correct_option = correct_match.group(1)
-            question_text = correct_match.group(2)
-            questions.append({
-                "question": question_text.strip(),
-                "options": options,
-                "answer": correct_option,
-                "full": full_match
-            })
-    return questions
+@app.route('/')
+def home():
+    if 'username' not in session:
+        return redirect(url_for('login'))
+    return redirect(url_for('index'))
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
-        user = request.form['username']
-        pwd = request.form['password']
-        if user in USERS and USERS[user]['password'] == pwd:
-            session['user'] = user
-            session['role'] = USERS[user]['role']
+        username = request.form['username']
+        password = request.form['password']
+        if username in USERS and USERS[username]['password'] == password:
+            session['username'] = username
+            session['role'] = USERS[username]['role']
             return redirect(url_for('index'))
         else:
-            return render_template('login.html', error="帳號或密碼錯誤")
+            return render_template('login.html', error='帳號或密碼錯誤')
     return render_template('login.html')
 
 @app.route('/logout')
@@ -56,155 +40,151 @@ def logout():
     session.clear()
     return redirect(url_for('login'))
 
-@app.route('/', methods=['GET', 'POST'])
+def parse_questions(text):
+    pattern = r"\([A-D]\)\d+\..*?(?=(\n\([A-D]\)\d+\.|\Z))"
+    matches = re.finditer(pattern, text, re.DOTALL)
+    questions = []
+    for match in matches:
+        block = match.group(0).strip()
+        lines = block.split('\n')
+        first_line = lines[0]
+        options = lines[1:]
+        correct_match = re.match(r"\(([A-D])\)(\d+)\.(.*)", first_line)
+        if not correct_match or len(options) != 4:
+            continue
+        answer = correct_match.group(1)
+        index = int(correct_match.group(2))
+        qtext = correct_match.group(3).strip()
+        qdata = {
+            'index': index,
+            'question': qtext,
+            'options': {opt[1]: opt[3:].strip() for opt in options if re.match(r"\([A-D]\)", opt)},
+            'answer': answer,
+            'full': block
+        }
+        questions.append(qdata)
+    return questions
+
+@app.route('/index', methods=['GET', 'POST'])
 def index():
-    if 'user' not in session:
+    if 'username' not in session:
         return redirect(url_for('login'))
 
-    uploaded_files = sorted([
-        f for f in os.listdir(UPLOAD_FOLDER)
-        if f.endswith('.txt') and '[解析]' in f
-    ])
-
+    uploaded_files = [f for f in os.listdir('.') if f.startswith('[解析]') and f.endswith('.txt')]
     error = None
     if request.method == 'POST':
         selected_file = request.form.get('selected_file')
-        file = request.files.get('quizfile')
+        quizfile = request.files.get('quizfile')
+        q_range = request.form.get('q_range', '')
+        q_count = request.form.get('q_count', type=int)
+        time_limit = request.form.get('time_limit', type=int, default=0)
 
-        filepath = None
-        if session['role'] == 'admin' and file and file.filename.endswith('.txt') and '[解析]' in file.filename:
-            filepath = os.path.join(UPLOAD_FOLDER, file.filename)
-            file.save(filepath)
-        elif selected_file and selected_file.endswith('.txt') and '[解析]' in selected_file:
-            filepath = os.path.join(UPLOAD_FOLDER, selected_file)
+        if session['role'] == 'admin' and quizfile and quizfile.filename:
+            filename = secure_filename(quizfile.filename)
+            quizfile.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+            selected_file = filename
+
+        if not selected_file:
+            error = "請選擇或上傳一個題庫檔案"
         else:
-            error = '請上傳或選擇格式正確的 [解析] 題庫檔案（.txt）'
-            return render_template('index.html', files=uploaded_files, role=session['role'], error=error)
-
-        try:
-            with open(filepath, encoding='utf-8') as f:
+            session['filename'] = selected_file
+            with open(selected_file, encoding='utf-8') as f:
                 questions = parse_questions(f.read())
-        except Exception as e:
-            return render_template('index.html', files=uploaded_files, role=session['role'], error=f'讀取題庫失敗：{e}')
+            if not questions:
+                error = "題庫解析失敗或為空"
+            else:
+                if '-' in q_range:
+                    start, end = map(int, q_range.split('-'))
+                    questions = [q for q in questions if start <= q['index'] <= end]
+                if q_count and q_count < len(questions):
+                    questions = random.sample(questions, q_count)
+                session['questions'] = questions
+                session['current'] = 0
+                session['start_time'] = time.time()
+                session['score'] = 0
+                session['total'] = len(questions)
+                session['wrong_list'] = []
+                return redirect(url_for('quiz'))
 
-        q_range = request.form.get('q_range', '').strip()
-        q_count = int(request.form.get('q_count', 50))
-        time_limit = int(request.form.get('time_limit', 0))
-
-        if q_range:
-            match = re.match(r'(\d+)\s*[-~]\s*(\d+)', q_range)
-            if match:
-                start, end = int(match.group(1)), int(match.group(2))
-                questions = [
-                    q for q in questions
-                    if start <= int(re.match(r'(\d+)\.', q['question']).group(1)) <= end
-                ]
-
-        random.shuffle(questions)
-        questions = questions[:q_count]
-
-        session['questions'] = questions
-        session['current'] = 0
-        session['correct'] = 0
-        session['wrong_list'] = []
-        session['start_time'] = time.time()
-        session['time_limit'] = time_limit
-        session['mode'] = 'normal'
-
-        return redirect(url_for('quiz'))
-
-    return render_template('index.html', files=uploaded_files, role=session['role'])
+    return render_template('index.html', files=uploaded_files, error=error, role=session['role'])
 
 @app.route('/quiz', methods=['GET', 'POST'])
 def quiz():
     if 'questions' not in session or session['current'] >= len(session['questions']):
-        return redirect(url_for('result' if session['mode'] == 'normal' else 'review_result'))
-
-    q = session['questions'][session['current']]
+        return redirect(url_for('result'))
 
     if request.method == 'POST':
-        selected = request.form.get('answer')
-        answer_time = round(time.time() - session.get('question_start_time', time.time()), 2)
-        is_correct = selected == q['answer']
-
-        selected_text = next((opt for opt in q['options'] if opt.startswith(f"({selected})")), "未選擇")
-        correct_text = next((opt for opt in q['options'] if opt.startswith(f"({q['answer']})")), "未知")
-
-        session['feedback'] = {
-            'is_correct': is_correct,
-            'correct_text': correct_text,
-            'selected_text': selected_text,
-            'answer_time': answer_time
+        selected = request.form.get('option')
+        q = session['questions'][session['current']]
+        correct = q['answer']
+        feedback = {
+            'is_correct': selected == correct,
+            'selected_answer': f"({selected}) {q['options'].get(selected, '')}",
+            'correct_answer': f"({correct}) {q['options'].get(correct, '')}",
+            'selected_text': q['options'].get(selected, ''),
+            'correct_text': q['options'].get(correct, ''),
+            'answer_time': round(time.time() - session.get('question_start', time.time()), 2)
         }
-
-        if session['mode'] == 'normal':
-            if is_correct:
-                session['correct'] += 1
-            else:
-                q['selected'] = selected_text
-                q['correct_text'] = correct_text
-                q['answer_time'] = answer_time
-                session['wrong_list'].append(q)
+        if selected == correct:
+            session['score'] += 1
         else:
-            if not is_correct:
-                q['selected'] = selected_text
-                q['correct_text'] = correct_text
-                q['answer_time'] = answer_time
-                session['wrong_list'].append(q)
-
+            q['selected'] = feedback['selected_answer']
+            q['correct_text'] = feedback['correct_answer']
+            q['answer_time'] = feedback['answer_time']
+            session['wrong_list'].append(q)
         session['current'] += 1
+        session['last_feedback'] = feedback
         return redirect(url_for('feedback'))
 
-    session['question_start_time'] = time.time()
-    return render_template('quiz.html', question=q, current=session['current']+1, total=len(session['questions']), time_limit=session.get('time_limit', 0))
+    session['question_start'] = time.time()
+    q = session['questions'][session['current']]
+    return render_template('quiz.html', q=q, qid=session['current']+1, total=session['total'])
 
 @app.route('/feedback')
 def feedback():
-    return render_template('feedback.html', feedback=session.get('feedback', {}))
+    return render_template('feedback.html', feedback=session.get('last_feedback'))
 
 @app.route('/result')
 def result():
-    total_time = round(time.time() - session.get('start_time', time.time()), 2)
-    correct = session.get('correct', 0)
-    total = len(session.get('questions', []))
-    wrong_list = session.get('wrong_list', [])
+    score = session.get('score', 0)
+    total = session.get('total', 1)
+    time_used = round(time.time() - session.get('start_time', time.time()), 2)
 
-    if wrong_list:
-        username = session.get('user', 'guest')
-        filename = f'quiz_result_{username}.txt'
-        with open(filename, 'w', encoding='utf-8') as f:
-            for q in wrong_list:
+    # 錯題紀錄
+    if session.get('wrong_list'):
+        username = session['username']
+        with open(f'quiz_result_{username}.txt', 'w', encoding='utf-8') as f:
+            for q in session['wrong_list']:
                 f.write(q['full'] + '\n')
                 f.write(f"[選擇] {q.get('selected', '')}\n")
                 f.write(f"[正解] {q.get('correct_text', '')}\n")
                 f.write(f"[時間] {q.get('answer_time', 0)} 秒\n\n")
 
-    return render_template('result.html', correct=correct, total=total, wrong=len(wrong_list), total_time=total_time)
+    # 成績紀錄
+    history_path = f"scores_{session['username']}.json"
+    records = []
+    if os.path.exists(history_path):
+        with open(history_path, encoding='utf-8') as f:
+            records = json.load(f)
+    records.append({
+        'quizfile': session.get('filename'),
+        'score': score,
+        'total': total,
+        'accuracy': round(score/total*100, 2),
+        'time_used': time_used,
+        'timestamp': datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    })
+    with open(history_path, 'w', encoding='utf-8') as f:
+        json.dump(records, f, ensure_ascii=False, indent=2)
 
-@app.route('/review')
-def review():
-    wrong_list = session.get('wrong_list', [])
-    if not wrong_list:
-        return redirect(url_for('result'))
-
-    session['questions'] = wrong_list
-    session['current'] = 0
-    session['wrong_list'] = []
-    session['mode'] = 'review'
-    session['start_time'] = time.time()
-    return redirect(url_for('quiz'))
-
-@app.route('/review_result')
-def review_result():
-    return render_template('review_result.html', wrong=len(session.get('wrong_list', [])))
+    return render_template('result.html', score=score, total=total, time_used=time_used)
 
 @app.route('/history')
 def history():
-    if 'user' not in session:
+    if 'username' not in session:
         return redirect(url_for('login'))
 
-    username = session['user']
-    filename = f'quiz_result_{username}.txt'
+    filename = f'quiz_result_{session["username"]}.txt'
     records = []
     if os.path.exists(filename):
         with open(filename, encoding='utf-8') as f:
@@ -225,6 +205,17 @@ def history():
                         'seconds': sec.replace('[時間]', '').strip()
                     })
     return render_template('history.html', records=records)
+
+@app.route('/score')
+def score():
+    if 'username' not in session:
+        return redirect(url_for('login'))
+    history_path = f"scores_{session['username']}.json"
+    records = []
+    if os.path.exists(history_path):
+        with open(history_path, encoding='utf-8') as f:
+            records = json.load(f)
+    return render_template('score.html', records=records, username=session['username'])
 
 if __name__ == '__main__':
     app.run(debug=True)
