@@ -46,30 +46,39 @@
             margin: 5px 0;
         }
 
-        button, .btn-link {
+        .button-group {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .full-width {
             width: 100%;
             padding: 12px;
             font-size: 1.1rem;
-            color: white;
-            background-color: #28a745;
             border: none;
             border-radius: 5px;
-            cursor: pointer;
             text-align: center;
             text-decoration: none;
-            margin-top: 10px;
-            display: inline-block;
+            box-sizing: border-box;
         }
 
-        button:hover, .btn-link:hover {
+        .green {
+            background-color: #28a745;
+            color: white;
+        }
+
+        .green:hover {
             background-color: #218838;
         }
 
-        .btn-link {
+        .blue {
             background-color: #007bff;
+            color: white;
         }
 
-        .btn-link:hover {
+        .blue:hover {
             background-color: #0056b3;
         }
 
@@ -108,14 +117,15 @@
         <label for="time_limit">每題限時（秒，0 表示不限時間）</label>
         <input type="number" name="time_limit" id="time_limit" value="0">
 
-        <button type="submit">開始測驗</button>
+        <div class="button-group">
+            <button type="submit" class="full-width green">開始測驗</button>
+            <a href="{{ url_for('history') }}" class="full-width blue">歷史錯題</a>
+        </div>
 
         {% if error %}
         <p style="color:red;">{{ error }}</p>
         {% endif %}
     </form>
-
-    <a class="btn-link" href="{{ url_for('history') }}">歷史錯題</a>
 </div>
 </body>
 </html>
