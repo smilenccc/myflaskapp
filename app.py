@@ -189,6 +189,18 @@ def result():
 
     return render_template('result.html', score=score, total=total, time_used=time_used, correct=correct, incorrect=incorrect)
 
+@app.route('/review')
+def review():
+    if 'wrong_list' not in session or not session['wrong_list']:
+        return redirect(url_for('index'))
+    session['questions'] = session['wrong_list']
+    session['current'] = 0
+    session['score'] = 0
+    session['total'] = len(session['questions'])
+    session['wrong_list'] = []
+    session['start_time'] = time.time()
+    return redirect(url_for('quiz'))
+
 @app.route('/history')
 def history():
     if 'username' not in session:

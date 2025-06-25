@@ -2,50 +2,78 @@
 <html lang="zh">
 <head>
     <meta charset="UTF-8">
-    <title>歷史錯題紀錄</title>
+    <title>錯題紀錄</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <style>
         body {
             font-family: Arial, sans-serif;
+            background-color: #f8f9fa;
             padding: 20px;
-            background: #f1f1f1;
         }
+
         .container {
-            max-width: 800px;
-            background: white;
+            max-width: 900px;
             margin: auto;
+            background: white;
             padding: 20px;
             border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.2);
         }
+
+        h2 {
+            text-align: center;
+            color: #dc3545;
+        }
+
         .question-block {
-            margin-bottom: 20px;
-            padding: 15px;
-            border-left: 5px solid #007bff;
-            background: #f9f9f9;
+            margin-bottom: 25px;
+            border-bottom: 1px solid #ccc;
+            padding-bottom: 15px;
         }
-        .selected { color: red; }
-        .correct { color: green; }
+
+        .question {
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .option {
+            margin-left: 20px;
+        }
+
+        .wrong {
+            color: red;
+        }
+
+        .correct {
+            color: green;
+        }
+
+        .time {
+            color: #555;
+        }
+
+        @media (max-width: 600px) {
+            .question-block { font-size: 0.95rem; }
+        }
     </style>
 </head>
 <body>
 <div class="container">
-    <h2>歷史錯題紀錄</h2>
+    <h2>錯題紀錄</h2>
     {% if records %}
-        {% for item in records %}
+        {% for r in records %}
         <div class="question-block">
-            <p><strong>{{ item.question }}</strong></p>
-            <ul>
-                {% for opt in item.options %}
-                    <li>{{ opt }}</li>
-                {% endfor %}
-            </ul>
-            <p><span class="selected">你的答案：{{ item.selected }}</span></p>
-            <p><span class="correct">正確答案：{{ item.correct }}</span></p>
-            <p>作答時間：{{ item.seconds }}</p>
+            <div class="question">{{ r.question }}</div>
+            {% for opt in r.options %}
+                <div class="option">{{ opt }}</div>
+            {% endfor %}
+            <div class="wrong">你的答案：{{ r.selected }}</div>
+            <div class="correct">正確答案：{{ r.correct }}</div>
+            <div class="time">作答時間：{{ r.seconds }}</div>
         </div>
         {% endfor %}
     {% else %}
-        <p>尚無錯題紀錄。</p>
+        <p>目前尚無錯題紀錄。</p>
     {% endif %}
 </div>
 </body>
