@@ -2,86 +2,111 @@
 <html lang="zh">
 <head>
     <meta charset="UTF-8">
-    <title>測驗中</title>
+    <title>題目作答</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <style>
         body {
             font-family: Arial, sans-serif;
+            background: #f0f2f5;
             padding: 20px;
-            line-height: 1.6;
-            background-color: #f8f9fa;
         }
 
         .container {
             max-width: 800px;
             margin: auto;
-            background: white;
+            background: #fff;
             padding: 20px;
             border-radius: 10px;
-            box-shadow: 0 0 10px rgba(0,0,0,0.2);
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
         }
 
-        h3 {
-            font-size: 1.2rem;
+        h2 {
+            text-align: center;
+        }
+
+        form {
+            margin-top: 20px;
         }
 
         .option {
-            margin-bottom: 10px;
-            font-size: 1rem;
+            margin: 10px 0;
+            font-size: 1.2rem;
         }
 
         input[type="radio"] {
             margin-right: 10px;
-            transform: scale(1.2);
         }
 
         button {
-            display: block;
-            width: 100%;
-            padding: 12px;
-            font-size: 1.2rem;
-            color: white;
+            margin-top: 20px;
+            padding: 12px 20px;
+            font-size: 1.1rem;
             background-color: #007bff;
             border: none;
+            color: white;
             border-radius: 5px;
             cursor: pointer;
-            margin-top: 25px; /* 距離選項至少一行空白以上 */
+            width: 100%;
         }
 
         button:hover {
             background-color: #0056b3;
         }
 
+        .progress {
+            margin-top: 15px;
+            height: 10px;
+            background-color: #e9ecef;
+            border-radius: 5px;
+            overflow: hidden;
+        }
+
+        .progress-bar {
+            height: 100%;
+            background-color: #28a745;
+            width: 0%;
+            transition: width 1s linear;
+        }
+
         @media (max-width: 600px) {
-            body {
-                padding: 10px;
-            }
-            h3, .option {
+            .option {
                 font-size: 1rem;
             }
             button {
-                font-size: 1.1rem;
+                font-size: 1rem;
             }
         }
     </style>
 </head>
 <body>
 <div class="container">
-    <h3>第 {{ current }}/{{ total }} 題：{{ question.question }}</h3>
-    {% if time_limit > 0 %}
-    <p style="color: #dc3545;">限時：{{ time_limit }} 秒</p>
-    {% endif %}
+    <h2>選擇正確答案</h2>
+    <h3>第 {{ qid }}/{{ total }} 題：{{ q.question }}</h3>
     <form method="post">
-        {% for opt in question.options %}
+        {% for key, value in q.options.items() %}
         <div class="option">
-            <label>
-                <input type="radio" name="answer" value="{{ opt[1] }}" required> 
-                {{ opt }}
-            </label>
+            <label><input type="radio" name="option" value="{{ key }}" required> ({{ key }}) {{ value }}</label>
         </div>
         {% endfor %}
         <button type="submit">提交答案</button>
     </form>
+    {% if session.get('time_limit', 0) > 0 %}
+    <div class="progress">
+        <div class="progress-bar" id="timer-bar"></div>
+    </div>
+    <script>
+        let duration = {{ session['time_limit'] }};
+        let bar = document.getElementById("timer-bar");
+        let interval = setInterval(() => {
+            duration -= 1;
+            bar.style.width = (100 - (duration / {{ session['time_limit'] }} * 100)) + "%";
+            if (duration <= 0) {
+                clearInterval(interval);
+                document.forms[0].submit();
+            }
+        }, 1000);
+    </script>
+    {% endif %}
 </div>
 </body>
 </html>
