@@ -7,7 +7,7 @@
     <style>
         body {
             font-family: Arial, sans-serif;
-            background-color: #f8f9fa;
+            background-color: #f4f4f4;
             padding: 20px;
         }
 
@@ -16,65 +16,71 @@
             margin: auto;
             background: white;
             padding: 20px;
-            border-radius: 10px;
-            box-shadow: 0 0 10px rgba(0,0,0,0.2);
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
         }
 
         h2 {
             text-align: center;
             color: #dc3545;
+            margin-bottom: 20px;
         }
 
         .question-block {
             margin-bottom: 25px;
-            border-bottom: 1px solid #ccc;
-            padding-bottom: 15px;
+            padding: 15px;
+            border-left: 5px solid #dc3545;
+            background-color: #fff5f5;
         }
 
-        .question {
+        .question-block p {
+            margin: 5px 0;
+        }
+
+        .highlight {
             font-weight: bold;
-            margin-bottom: 5px;
         }
 
-        .option {
-            margin-left: 20px;
+        .btn-back {
+            display: block;
+            width: 200px;
+            margin: 30px auto 0;
+            padding: 10px;
+            text-align: center;
+            background-color: #007bff;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
         }
 
-        .wrong {
-            color: red;
-        }
-
-        .correct {
-            color: green;
-        }
-
-        .time {
-            color: #555;
+        .btn-back:hover {
+            background-color: #0056b3;
         }
 
         @media (max-width: 600px) {
-            .question-block { font-size: 0.95rem; }
+            .question-block {
+                font-size: 0.95rem;
+            }
         }
     </style>
 </head>
 <body>
 <div class="container">
-    <h2>錯題紀錄</h2>
-    {% if records %}
-        {% for r in records %}
-        <div class="question-block">
-            <div class="question">{{ r.question }}</div>
-            {% for opt in r.options %}
-                <div class="option">{{ opt }}</div>
-            {% endfor %}
-            <div class="wrong">你的答案：{{ r.selected }}</div>
-            <div class="correct">正確答案：{{ r.correct }}</div>
-            <div class="time">作答時間：{{ r.seconds }}</div>
-        </div>
+    <h2>歷史錯題紀錄</h2>
+
+    {% for r in records %}
+    <div class="question-block">
+        <p class="highlight">題目：{{ r.question }}</p>
+        {% for opt in r.options %}
+        <p>{{ opt }}</p>
         {% endfor %}
-    {% else %}
-        <p>目前尚無錯題紀錄。</p>
-    {% endif %}
+        <p>你的答案：<span class="highlight" style="color:red">{{ r.selected }}</span></p>
+        <p>正確答案：<span class="highlight" style="color:green">{{ r.correct }}</span></p>
+        <p>作答時間：<span class="highlight">{{ r.seconds }}</span></p>
+    </div>
+    {% endfor %}
+
+    <a class="btn-back" href="javascript:history.back()">← 返回上一頁</a>
 </div>
 </body>
 </html>
