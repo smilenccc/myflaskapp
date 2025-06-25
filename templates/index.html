@@ -26,7 +26,8 @@
 
         input[type="text"],
         input[type="number"],
-        input[type="file"] {
+        input[type="file"],
+        select {
             width: 100%;
             padding: 8px;
             margin-bottom: 15px;
@@ -40,10 +41,6 @@
             font-weight: bold;
             margin-top: 10px;
             margin-bottom: 5px;
-        }
-
-        .radio-option {
-            margin: 5px 0;
         }
 
         .button-group {
@@ -104,16 +101,17 @@
 
     <form method="post" enctype="multipart/form-data">
         <h3>選擇已上傳的題庫：</h3>
-        {% for file in files %}
-            {% if '[解析]' in file and file.endswith('.txt') %}
-            <div class="radio-option">
-                <label><input type="radio" name="selected_file" value="{{ file }}"> {{ file }}</label>
-            </div>
-            {% endif %}
-        {% endfor %}
+        <label for="selected_file">題庫檔案選單：</label>
+        <select name="selected_file" id="selected_file">
+            {% for file in files %}
+                {% if '[解析]' in file and file.endswith('.txt') %}
+                <option value="{{ file }}">{{ file }}</option>
+                {% endif %}
+            {% endfor %}
+        </select>
 
         {% if role == 'admin' %}
-        <h3>或上傳新的題庫檔案：</h3>
+        <h3>或上傳新的題庫檔案（僅管理員可用）：</h3>
         <label for="quizfile">上傳新題庫檔案：</label>
         <input type="file" name="quizfile" id="quizfile">
         {% endif %}
