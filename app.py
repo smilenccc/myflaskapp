@@ -51,6 +51,11 @@ def login():
             return render_template('login.html', error="帳號或密碼錯誤")
     return render_template('login.html')
 
+@app.route('/logout')
+def logout():
+    session.clear()
+    return redirect(url_for('login'))
+
 @app.route('/', methods=['GET', 'POST'])
 def index():
     if 'user' not in session:
