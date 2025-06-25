@@ -1,4 +1,3 @@
-# app.py with 成績紀錄功能 + 錯題紀錄 + 登入控制
 from flask import Flask, render_template, request, redirect, url_for, session
 from flask_session import Session
 import os, re, random, time, datetime, json
@@ -7,8 +6,10 @@ from werkzeug.utils import secure_filename
 app = Flask(__name__)
 app.secret_key = 'secretkey'
 app.config['SESSION_TYPE'] = 'filesystem'
-app.config['UPLOAD_FOLDER'] = '.'
+app.config['UPLOAD_FOLDER'] = './uploads'
 Session(app)
+
+os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 
 USERS = {
     'smile': {'password': 'smile', 'role': 'admin'},
@@ -70,8 +71,9 @@ def index():
     if 'username' not in session:
         return redirect(url_for('login'))
 
-    uploaded_files = [f for f in os.listdir('.') if f.startswith('[解析]') and f.endswith('.txt')]
+    uploaded_files = [f for f in os.listdir(app.config['UPLOAD_FOLDER']) if f.startswith('[解析]') and f.endswith('.txt')]
     error = None
+
     if request.method == 'POST':
         selected_file = request.form.get('selected_file')
         quizfile = request.files.get('quizfile')
@@ -88,14 +90,22 @@ def index():
             error = "請選擇或上傳一個題庫檔案"
         else:
             session['filename'] = selected_file
-            with open(selected_file, encoding='utf-8') as f:
-                questions = parse_questions(f.read())
+            full_path = os.path.join(app.config['UPLOAD_FOLDER'], selected_file)
+            try:
+                with open(full_path, encoding='utf-8') as f:
+                    questions = parse_questions(f.read())
+            except Exception as e:
+                return render_template('index.html', files=uploaded_files, error=f"無法讀取題庫：{e}", role=session['role'])
+
             if not questions:
                 error = "題庫解析失敗或為空"
             else:
                 if '-' in q_range:
-                    start, end = map(int, q_range.split('-'))
-                    questions = [q for q in questions if start <= q['index'] <= end]
+                    try:
+                        start, end = map(int, q_range.split('-'))
+                        questions = [q for q in questions if start <= q['index'] <= end]
+                    except:
+                        pass
                 if q_count and q_count < len(questions):
                     questions = random.sample(questions, q_count)
                 session['questions'] = questions

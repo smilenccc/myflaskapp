@@ -79,19 +79,17 @@
             background-color: #0056b3;
         }
 
-        .gray {
-            background-color: #6c757d;
+        .red {
+            background-color: #dc3545;
             color: white;
         }
 
-        .gray:hover {
-            background-color: #5a6268;
+        .red:hover {
+            background-color: #c82333;
         }
 
         @media (max-width: 600px) {
-            body {
-                padding: 10px;
-            }
+            body { padding: 10px; }
         }
     </style>
 </head>
@@ -100,36 +98,34 @@
     <h2>測驗初始設定</h2>
 
     <form method="post" enctype="multipart/form-data">
-        <h3>選擇已上傳的題庫：</h3>
-        <label for="selected_file">題庫檔案選單：</label>
-        <select name="selected_file" id="selected_file">
+
+        <label for="selected_file">選擇已上傳的題庫：</label>
+        <select name="selected_file" id="selected_file" required>
+            <option value="">-- 請選擇題庫 --</option>
             {% for file in files %}
-                {% if '[解析]' in file and file.endswith('.txt') %}
                 <option value="{{ file }}">{{ file }}</option>
-                {% endif %}
             {% endfor %}
         </select>
 
         {% if role == 'admin' %}
-        <h3>或上傳新的題庫檔案（僅管理員可用）：</h3>
-        <label for="quizfile">上傳新題庫檔案：</label>
+        <label for="quizfile">上傳新的題庫檔案：</label>
         <input type="file" name="quizfile" id="quizfile">
         {% endif %}
 
-        <h3>其他設定：</h3>
-        <label for="q_range">出題範圍（例如：1-50，從上到下依順序切題）</label>
+        <label for="q_range">出題範圍（例如：1-50）</label>
         <input type="text" name="q_range" id="q_range">
 
-        <label for="q_count">出題總數（例如：50，從範圍中抽幾題）</label>
+        <label for="q_count">出題總數（預設 50 題）</label>
         <input type="number" name="q_count" id="q_count" value="50">
 
-        <label for="time_limit">每題限時（秒，0 表示不限時間）</label>
+        <label for="time_limit">每題限時（秒，0 表示不限）</label>
         <input type="number" name="time_limit" id="time_limit" value="0">
 
         <div class="button-group">
             <button type="submit" class="full-width green">開始測驗</button>
             <a href="{{ url_for('history') }}" class="full-width blue">歷史錯題</a>
-            <a href="{{ url_for('logout') }}" class="full-width gray">登出</a>
+            <a href="{{ url_for('score') }}" class="full-width blue">成績紀錄</a>
+            <a href="{{ url_for('logout') }}" class="full-width red">登出</a>
         </div>
 
         {% if error %}
