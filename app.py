@@ -176,13 +176,16 @@ def result():
     # === 正常測驗模式 ===
     if session.get('wrong_list'):
         username = session['username']
-        with open(f'quiz_result_{username}.txt', 'w', encoding='utf-8') as f:
+        quiz_name = session.get('filename', '未知題庫')
+        with open(f'quiz_result_{username}.txt', 'a', encoding='utf-8') as f:
+            f.write(f"\n==== 題庫：{quiz_name} ====\n")
             for q in session['wrong_list']:
                 f.write(q['full'] + '\n')
                 f.write(f"[選擇] {q.get('selected', '')}\n")
                 f.write(f"[正解] {q.get('correct_text', '')}\n")
                 f.write(f"[時間] {q.get('answer_time', 0)} 秒\n\n")
 
+    # === 儲存分數紀錄 ===
     history_path = f"scores_{session['username']}.json"
     records = []
     if os.path.exists(history_path):
@@ -192,7 +195,7 @@ def result():
         'quizfile': session.get('filename'),
         'score': score,
         'total': total,
-        'accuracy': round(score/total*100, 2),
+        'accuracy': round(score / total * 100, 2),
         'time_used': time_used,
         'timestamp': datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     })
@@ -200,6 +203,7 @@ def result():
         json.dump(records, f, ensure_ascii=False, indent=2)
 
     return render_template('result.html', score=score, total=total, time_used=time_used, correct=correct, incorrect=incorrect)
+
 
 @app.route('/review')
 def review():
