@@ -7,111 +7,126 @@
     <style>
         body {
             font-family: Arial, sans-serif;
-            background: #f8f9fa;
+            background-color: #f4f4f4;
             padding: 20px;
         }
 
         .container {
-            max-width: 1000px;
+            max-width: 900px;
             margin: auto;
             background: white;
             padding: 20px;
-            border-radius: 10px;
-            box-shadow: 0 0 10px rgba(0,0,0,0.2);
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
         }
 
         h2 {
             text-align: center;
             margin-bottom: 20px;
-            color: #007bff;
+            color: #28a745;
         }
 
         table {
             width: 100%;
             border-collapse: collapse;
+            margin-bottom: 20px;
         }
 
         th, td {
             padding: 10px;
-            border-bottom: 1px solid #ddd;
+            border: 1px solid #ccc;
             text-align: center;
         }
 
         th {
-            background-color: #f1f1f1;
             cursor: pointer;
+            background-color: #f0f0f0;
         }
 
-        tr:hover {
-            background-color: #f9f9f9;
+        .btn-back {
+            display: block;
+            width: 200px;
+            margin: auto;
+            padding: 10px;
+            text-align: center;
+            background-color: #007bff;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+        }
+
+        .btn-back:hover {
+            background-color: #0056b3;
         }
 
         @media (max-width: 600px) {
-            table { font-size: 0.85rem; }
-            th, td { padding: 6px; }
-        }
-    </style>
-    <script>
-        function sortTable(n) {
-            const table = document.getElementById("scoreTable");
-            let switching = true, dir = "desc", switchcount = 0;
-            while (switching) {
-                switching = false;
-                const rows = table.rows;
-                for (let i = 1; i < rows.length - 1; i++) {
-                    let shouldSwitch = false;
-                    const x = rows[i].getElementsByTagName("TD")[n];
-                    const y = rows[i + 1].getElementsByTagName("TD")[n];
-                    let xVal = isNaN(parseFloat(x.innerHTML)) ? x.innerHTML.toLowerCase() : parseFloat(x.innerHTML);
-                    let yVal = isNaN(parseFloat(y.innerHTML)) ? y.innerHTML.toLowerCase() : parseFloat(y.innerHTML);
-                    if ((dir === "asc" && xVal > yVal) || (dir === "desc" && xVal < yVal)) {
-                        shouldSwitch = true;
-                        break;
-                    }
-                }
-                if (shouldSwitch) {
-                    rows[i].parentNode.insertBefore(rows[i + 1], rows[i]);
-                    switching = true;
-                    switchcount++;
-                } else if (switchcount === 0 && dir === "desc") {
-                    dir = "asc";
-                    switching = true;
-                }
+            table, th, td {
+                font-size: 0.9rem;
             }
         }
-    </script>
+    </style>
 </head>
 <body>
 <div class="container">
     <h2>{{ username }} 的成績紀錄</h2>
-    {% if records %}
     <table id="scoreTable">
         <thead>
-        <tr>
-            <th onclick="sortTable(0)">題庫名稱</th>
-            <th onclick="sortTable(1)">得分</th>
-            <th onclick="sortTable(2)">總題數</th>
-            <th onclick="sortTable(3)">正確率</th>
-            <th onclick="sortTable(4)">花費時間(秒)</th>
-            <th onclick="sortTable(5)">作答時間</th>
-        </tr>
+            <tr>
+                <th onclick="sortTable(0)">題庫</th>
+                <th onclick="sortTable(1)">答對</th>
+                <th onclick="sortTable(2)">總題數</th>
+                <th onclick="sortTable(3)">正確率</th>
+                <th onclick="sortTable(4)">時間</th>
+                <th onclick="sortTable(5)">作答時間</th>
+            </tr>
         </thead>
         <tbody>
-        {% for r in records %}
-        <tr>
-            <td>{{ r.quizfile }}</td>
-            <td>{{ r.score }}</td>
-            <td>{{ r.total }}</td>
-            <td>{{ r.accuracy }}%</td>
-            <td>{{ r.time_used }}</td>
-            <td>{{ r.timestamp }}</td>
-        </tr>
-        {% endfor %}
+            {% for r in records %}
+            <tr>
+                <td>{{ r.quizfile }}</td>
+                <td>{{ r.score }}</td>
+                <td>{{ r.total }}</td>
+                <td>{{ r.accuracy }}%</td>
+                <td>{{ r.timestamp }}</td>
+                <td>{{ r.time_used }} 秒</td>
+            </tr>
+            {% endfor %}
         </tbody>
     </table>
-    {% else %}
-    <p>尚無成績紀錄。</p>
-    {% endif %}
+
+    <a class="btn-back" href="javascript:history.back()">← 返回上一頁</a>
 </div>
+
+<script>
+function sortTable(col) {
+    const table = document.getElementById("scoreTable");
+    let switching = true, dir = "asc", switchcount = 0;
+    while (switching) {
+        switching = false;
+        const rows = table.rows;
+        for (let i = 1; i < rows.length - 1; i++) {
+            let shouldSwitch = false;
+            const x = rows[i].getElementsByTagName("TD")[col];
+            const y = rows[i + 1].getElementsByTagName("TD")[col];
+            const a = isNaN(parseFloat(x.innerText)) ? x.innerText.toLowerCase() : parseFloat(x.innerText);
+            const b = isNaN(parseFloat(y.innerText)) ? y.innerText.toLowerCase() : parseFloat(y.innerText);
+            if ((dir === "asc" && a > b) || (dir === "desc" && a < b)) {
+                shouldSwitch = true;
+                break;
+            }
+        }
+        if (shouldSwitch) {
+            rows[i].parentNode.insertBefore(rows[i + 1], rows[i]);
+            switching = true;
+            switchcount++;
+        } else {
+            if (switchcount === 0 && dir === "asc") {
+                dir = "desc";
+                switching = true;
+            }
+        }
+    }
+}
+</script>
 </body>
 </html>
