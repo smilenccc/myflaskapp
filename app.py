@@ -159,8 +159,9 @@ def result():
     score = session.get('score', 0)
     total = session.get('total', 1)
     time_used = round(time.time() - session.get('start_time', time.time()), 2)
+    correct = score
+    incorrect = total - score
 
-    # 錯題紀錄
     if session.get('wrong_list'):
         username = session['username']
         with open(f'quiz_result_{username}.txt', 'w', encoding='utf-8') as f:
@@ -170,7 +171,6 @@ def result():
                 f.write(f"[正解] {q.get('correct_text', '')}\n")
                 f.write(f"[時間] {q.get('answer_time', 0)} 秒\n\n")
 
-    # 成績紀錄
     history_path = f"scores_{session['username']}.json"
     records = []
     if os.path.exists(history_path):
@@ -187,7 +187,7 @@ def result():
     with open(history_path, 'w', encoding='utf-8') as f:
         json.dump(records, f, ensure_ascii=False, indent=2)
 
-    return render_template('result.html', score=score, total=total, time_used=time_used)
+    return render_template('result.html', score=score, total=total, time_used=time_used, correct=correct, incorrect=incorrect)
 
 @app.route('/history')
 def history():
