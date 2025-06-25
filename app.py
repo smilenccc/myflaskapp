@@ -114,6 +114,7 @@ def index():
                 session['score'] = 0
                 session['total'] = len(questions)
                 session['wrong_list'] = []
+                session.pop('review_mode', None)
                 return redirect(url_for('quiz'))
 
     return render_template('index.html', files=uploaded_files, error=error, role=session['role'])
@@ -127,21 +128,19 @@ def quiz():
         selected = request.form.get('option')
         q = session['questions'][session['current']]
         correct = q['answer']
-        selected_text = q['options'].get(selected, '')
-        correct_text = q['options'].get(correct, '')
         feedback = {
             'is_correct': selected == correct,
-            'selected_letter': selected,
-            'selected_text': selected_text,
-            'correct_letter': correct,
-            'correct_text': correct_text,
+            'selected_answer': f"({selected}) {q['options'].get(selected, '')}",
+            'correct_answer': f"({correct}) {q['options'].get(correct, '')}",
+            'selected_text': q['options'].get(selected, ''),
+            'correct_text': q['options'].get(correct, ''),
             'answer_time': round(time.time() - session.get('question_start', time.time()), 2)
         }
         if selected == correct:
             session['score'] += 1
         else:
-            q['selected'] = f"({selected}) {selected_text}"
-            q['correct_text'] = f"({correct}) {correct_text}"
+            q['selected'] = feedback['selected_answer']
+            q['correct_text'] = feedback['correct_answer']
             q['answer_time'] = feedback['answer_time']
             session['wrong_list'].append(q)
         session['current'] += 1
@@ -164,6 +163,14 @@ def result():
     correct = score
     incorrect = total - score
 
+    # === 錯題重答模式 ===
+    if session.get('review_mode'):
+        wrong_list = session.get('wrong_list', [])
+        if not wrong_list:
+            session.pop('review_mode')
+        return render_template('review_result.html', wrong=len(wrong_list))
+
+    # === 正常測驗模式 ===
     if session.get('wrong_list'):
         username = session['username']
         with open(f'quiz_result_{username}.txt', 'w', encoding='utf-8') as f:
@@ -201,6 +208,7 @@ def review():
     session['total'] = len(session['questions'])
     session['wrong_list'] = []
     session['start_time'] = time.time()
+    session['review_mode'] = True
     return redirect(url_for('quiz'))
 
 @app.route('/history')
