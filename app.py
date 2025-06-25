@@ -130,8 +130,8 @@ def quiz():
         correct = q['answer']
         feedback = {
             'is_correct': selected == correct,
-            'selected_answer': f"({selected}) {q['options'].get(selected, '')}",
-            'correct_answer': f"({correct}) {q['options'].get(correct, '')}",
+            'selected_letter': selected,
+            'correct_letter': correct,
             'selected_text': q['options'].get(selected, ''),
             'correct_text': q['options'].get(correct, ''),
             'answer_time': round(time.time() - session.get('question_start', time.time()), 2)
