@@ -127,19 +127,21 @@ def quiz():
         selected = request.form.get('option')
         q = session['questions'][session['current']]
         correct = q['answer']
+        selected_text = q['options'].get(selected, '')
+        correct_text = q['options'].get(correct, '')
         feedback = {
             'is_correct': selected == correct,
-            'selected_answer': f"({selected}) {q['options'].get(selected, '')}",
-            'correct_answer': f"({correct}) {q['options'].get(correct, '')}",
-            'selected_text': q['options'].get(selected, ''),
-            'correct_text': q['options'].get(correct, ''),
+            'selected_letter': selected,
+            'selected_text': selected_text,
+            'correct_letter': correct,
+            'correct_text': correct_text,
             'answer_time': round(time.time() - session.get('question_start', time.time()), 2)
         }
         if selected == correct:
             session['score'] += 1
         else:
-            q['selected'] = feedback['selected_answer']
-            q['correct_text'] = feedback['correct_answer']
+            q['selected'] = f"({selected}) {selected_text}"
+            q['correct_text'] = f"({correct}) {correct_text}"
             q['answer_time'] = feedback['answer_time']
             session['wrong_list'].append(q)
         session['current'] += 1

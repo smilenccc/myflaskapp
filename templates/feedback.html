@@ -7,64 +7,73 @@
     <style>
         body {
             font-family: Arial, sans-serif;
-            padding: 20px;
             background-color: #f8f9fa;
+            padding: 20px;
         }
 
         .container {
             max-width: 800px;
             margin: auto;
-            padding: 20px;
             background: white;
+            padding: 20px;
             border-radius: 10px;
-            box-shadow: 0 0 10px rgba(0,0,0,0.2);
             text-align: center;
+            box-shadow: 0 0 10px rgba(0,0,0,0.2);
         }
 
-        h3 {
-            font-size: 1.5rem;
+        h2 {
+            font-size: 1.8rem;
+            color: #28a745;
         }
+
+        .wrong-text { color: red; font-weight: bold; }
+        .correct-text { color: green; font-weight: bold; }
 
         p {
             font-size: 1.2rem;
+            margin: 10px 0;
         }
 
-        .wrong { color: red; font-weight: bold; }
-        .correct { color: green; font-weight: bold; }
-
-        a {
+        a, button {
             display: inline-block;
             padding: 10px 20px;
-            margin-top: 15px;
+            margin-top: 20px;
             background-color: #007bff;
             color: white;
             text-decoration: none;
+            border: none;
             border-radius: 5px;
         }
 
-        a:hover {
+        a:hover, button:hover {
             background-color: #0056b3;
         }
 
         @media (max-width: 600px) {
-            body { padding: 10px; }
-            h3 { font-size: 1.3rem; }
+            h2 { font-size: 1.5rem; }
             p { font-size: 1rem; }
-            a { width: 100%; box-sizing: border-box; }
         }
     </style>
 </head>
 <body>
 <div class="container">
     {% if feedback.is_correct %}
-        <h3 class="correct">✅ 正確！</h3>
+        <h2>✅ 答對了！</h2>
     {% else %}
-        <h3 class="wrong">❌ 錯誤！</h3>
-        <p>你的答案：<span class="wrong">{{ feedback.selected_text }}</span></p>
-        <p>正確答案：<span class="correct">{{ feedback.correct_text }}</span></p>
+        <h2>❌ 錯誤！</h2>
+        <p>你的答案：
+            <span class="wrong-text">({{ feedback.selected_letter }}) {{ feedback.selected_text }}</span>
+        </p>
+        <p>正確答案：
+            <span class="correct-text">({{ feedback.correct_letter }}) {{ feedback.correct_text }}</span>
+        </p>
     {% endif %}
-    <p>作答時間：<strong>{{ feedback.answer_time }} 秒</strong></p>
-    <a href="{{ url_for('quiz') }}">下一題</a>
+    <p>作答時間：
+        <strong>{{ feedback.answer_time }} 秒</strong>
+    </p>
+    <form action="{{ url_for('quiz') }}" method="get">
+        <button type="submit">下一題</button>
+    </form>
 </div>
 </body>
 </html>
