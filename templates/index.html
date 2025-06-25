@@ -46,7 +46,7 @@
             margin: 5px 0;
         }
 
-        button {
+        button, .btn-link {
             width: 100%;
             padding: 12px;
             font-size: 1.1rem;
@@ -55,10 +55,22 @@
             border: none;
             border-radius: 5px;
             cursor: pointer;
+            text-align: center;
+            text-decoration: none;
+            margin-top: 10px;
+            display: inline-block;
         }
 
-        button:hover {
+        button:hover, .btn-link:hover {
             background-color: #218838;
+        }
+
+        .btn-link {
+            background-color: #007bff;
+        }
+
+        .btn-link:hover {
+            background-color: #0056b3;
         }
 
         @media (max-width: 600px) {
@@ -102,6 +114,8 @@
         <p style="color:red;">{{ error }}</p>
         {% endif %}
     </form>
+
+    <a class="btn-link" href="{{ url_for('history') }}">歷史錯題</a>
 </div>
 </body>
 </html>

@@ -1,3 +1,4 @@
+# app.py
 from flask import Flask, render_template, request, redirect, url_for, session
 from flask_session import Session
 import os, re, random, time
@@ -8,7 +9,9 @@ app.config['SESSION_TYPE'] = 'filesystem'
 Session(app)
 
 UPLOAD_FOLDER = './uploads'
+HISTORY_FILE = './history.txt'
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+
 
 def parse_questions(text):
     pattern = r"\([A-D]\)\d+\..*?(?=(\n\([A-D]\)\d+\.|\Z))"
@@ -30,6 +33,7 @@ def parse_questions(text):
                 "full": full_match
             })
     return questions
+
 
 @app.route('/', methods=['GET', 'POST'])
 def index():
@@ -85,6 +89,7 @@ def index():
 
     return render_template('index.html', files=uploaded_files)
 
+
 @app.route('/quiz', methods=['GET', 'POST'])
 def quiz():
     if 'questions' not in session or session['current'] >= len(session['questions']):
@@ -100,21 +105,23 @@ def quiz():
         selected_text = next((opt for opt in q['options'] if opt.startswith(f"({selected})")), "未選擇")
         correct_text = next((opt for opt in q['options'] if opt.startswith(f"({q['answer']})")), "未知")
 
-        # 記錄 feedback
         session['feedback'] = {
             'is_correct': is_correct,
             'correct_answer': correct_text,
             'selected_answer': selected_text,
+            'selected_text': selected_text,
+            'correct_text': correct_text,
             'answer_time': answer_time
         }
 
-        # 記錄錯誤題
         if session['mode'] == 'normal':
             if is_correct:
                 session['correct'] += 1
             else:
                 session['wrong_list'].append(q)
-        else:  # review mode
+                with open(HISTORY_FILE, 'a', encoding='utf-8') as f:
+                    f.write(f"[錯誤題目]\n{q['question']}\n你的答案: {selected_text}\n正確答案: {correct_text}\n作答時間: {answer_time} 秒\n---\n")
+        else:
             if not is_correct:
                 session['wrong_list'].append(q)
 
@@ -128,9 +135,11 @@ def quiz():
                            total=len(session['questions']),
                            time_limit=session.get('time_limit', 0))
 
+
 @app.route('/feedback')
 def feedback():
     return render_template('feedback.html', feedback=session.get('feedback', {}))
+
 
 @app.route('/result')
 def result():
@@ -150,6 +159,7 @@ def result():
                            wrong=len(wrong_list),
                            total_time=total_time)
 
+
 @app.route('/review')
 def review():
     wrong_list = session.get('wrong_list', [])
@@ -163,10 +173,23 @@ def review():
     session['start_time'] = time.time()
     return redirect(url_for('quiz'))
 
+
 @app.route('/review_result')
 def review_result():
     wrong_list = session.get('wrong_list', [])
     return render_template('review_result.html', wrong=len(wrong_list))
+
+
+@app.route('/history')
+def history():
+    if not os.path.exists(HISTORY_FILE):
+        return render_template('history.html', records=[])
+
+    with open(HISTORY_FILE, encoding='utf-8') as f:
+        blocks = f.read().strip().split('---\n')
+        records = [block.strip() for block in blocks if block.strip()]
+    return render_template('history.html', records=records)
+
 
 if __name__ == '__main__':
     app.run(debug=True)

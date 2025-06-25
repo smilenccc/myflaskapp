@@ -1,0 +1,76 @@
+<!-- history.html -->
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <title>歷史錯題</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            background-color: #f4f4f4;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: auto;
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 0 8px rgba(0,0,0,0.1);
+        }
+
+        h2 {
+            text-align: center;
+        }
+
+        .record {
+            margin-bottom: 20px;
+            padding: 10px;
+            border-left: 4px solid #dc3545;
+            background-color: #fff3f3;
+        }
+
+        .record p {
+            margin: 4px 0;
+            font-size: 1.1rem;
+        }
+
+        a {
+            display: block;
+            margin-top: 20px;
+            text-align: center;
+            color: #007bff;
+            text-decoration: none;
+        }
+
+        a:hover {
+            text-decoration: underline;
+        }
+
+        @media (max-width: 600px) {
+            .record p {
+                font-size: 1rem;
+            }
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h2>歷史錯題紀錄</h2>
+    {% if records %}
+        {% for record in records %}
+            <div class="record">
+                {% for line in record.splitlines() %}
+                    <p>{{ line }}</p>
+                {% endfor %}
+            </div>
+        {% endfor %}
+    {% else %}
+        <p>目前尚無錯誤紀錄。</p>
+    {% endif %}
+    <a href="{{ url_for('index') }}">返回首頁</a>
+</div>
+</body>
+</html>
