@@ -1,7 +1,3 @@
-{
-type: uploaded file
-fileName: app.py
-fullContent:
 from flask import Flask, render_template, request, redirect, url_for, session, flash
 from flask_session import Session
 import os, re, random, time, datetime, json
@@ -47,17 +43,17 @@ def logout():
 def parse_questions(text):
     """
     強化的解析邏輯 (區塊切割法)：
-    1. 清除雜訊 
+    1. 清除雜訊 / 正規化換行
     2. 使用 regex 定位所有題目的「開頭」：(答案)題號.題目
        - 支援括號、題號、點號之間的任意空白 (包括無空白)
     3. 兩個題目開頭之間的文字，全部歸給上一題，再從中解析選項
     """
     questions = []
     
-    # === 修正重點：修復原本導致 SyntaxError 的正規表示式 ===
-    # 目標：移除 
-    # Python regex 中，中括號 [] 是特殊字元，必須用反斜線 \[ \] 轉義
-    text = re.sub(r'\', '', text)
+    # === 1. 清除雜訊 / 正規化 ===
+    # 移除 BOM、統一換行符號，這些都是安全的處理，不會造成 SyntaxError
+    text = text.replace('\ufeff', '')
+    text = text.replace('\r\n', '\n').replace('\r', '\n')
     
     # 2. 定義題目開頭的 Regex
     # ^\s* : 行首允許空白
@@ -75,7 +71,7 @@ def parse_questions(text):
     for i, match in enumerate(matches):
         answer = match.group(1)       # 正解
         index = int(match.group(2))   # 題號
-        title_start = match.group(3).strip() # 題目第一行
+        title_start = match.group(3).strip()  # 題目第一行
         
         # 決定這個題目的「結束位置」 (即下一題的開始，或是檔案結尾)
         start_pos = match.start()
@@ -85,23 +81,21 @@ def parse_questions(text):
             end_pos = len(text)
             
         # 取得這一題的完整原始區塊 (包含換行、選項等)
-        # 我們跳過 match 的第一行(已經被 regex 抓了)，只取後面的內容來找選項
         full_block = text[start_pos:end_pos]
+        # 跳過 match 第一行，後面內容用來找選項／題目延伸
         content_block = text[match.end():end_pos]
         
         # 3. 在內容區塊中解析選項
-        # 預設題目內容是第一行，如果下面還有文字但在 (A) 之前，都算題目
         q_content = title_start
         options = {}
         
-        # 將區塊切成行
+        # 將區塊切成行，去掉空白行
         lines = [line.strip() for line in content_block.split('\n') if line.strip()]
         
-        current_part = 'QUESTION' # 狀態標記：目前正在讀取 題目 還是 選項
+        current_part = 'QUESTION'  # 狀態標記：目前正在讀取 題目 還是 選項
         
         for line in lines:
             # 檢查這行是不是選項開頭 (A), (B), (C), (D)
-            # 這裡也允許括號後有空白，例如 (A) 選項內容
             opt_match = re.match(r'^\(([A-D])\)\s*(.*)', line)
             
             if opt_match:
@@ -109,7 +103,7 @@ def parse_questions(text):
                 opt_label = opt_match.group(1)
                 opt_text = opt_match.group(2).strip()
                 options[opt_label] = opt_text
-                current_part = opt_label # 標記現在正在讀取哪個選項
+                current_part = opt_label  # 標記現在正在讀取哪個選項
             else:
                 # 這行不是選項開頭，代表是上一部分的延續 (多行題目 或 多行選項)
                 if current_part == 'QUESTION':
@@ -147,8 +141,10 @@ def index():
                 if quizfile and quizfile.filename:
                     filename = quizfile.filename
                     # 簡單過濾路徑符號
-                    if '/' in filename: filename = filename.split('/')[-1]
-                    if '\\' in filename: filename = filename.split('\\')[-1]
+                    if '/' in filename:
+                        filename = filename.split('/')[-1]
+                    if '\\' in filename:
+                        filename = filename.split('\\')[-1]
                         
                     path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
                     quizfile.save(path)
@@ -183,6 +179,7 @@ def index():
                 if not questions:
                     flash("題庫解析失敗或為空 (請檢查檔案內容格式)", 'error')
                 else:
+                    # 題號範圍篩選
                     if '-' in q_range:
                         try:
                             start, end = map(int, q_range.split('-'))
@@ -190,6 +187,7 @@ def index():
                         except:
                             pass
                     
+                    # 題數抽樣
                     if q_count and q_count < len(questions):
                         questions = random.sample(questions, q_count)
                     
@@ -220,7 +218,7 @@ def quiz():
             'correct_letter': correct,
             'selected_text': q['options'].get(selected, ''),
             'correct_text': q['options'].get(correct, ''),
-            'selected_answer': f"({selected}) {q['options'].get(selected, '')}",
+            'selected_answer': f"({selected}) {q['options'].get(selected, '')}" if selected else '',
             'correct_answer': f"({correct}) {q['options'].get(correct, '')}",
             'answer_time': round(time.time() - session.get('question_start', time.time()), 2)
         }
@@ -252,12 +250,14 @@ def result():
     correct = score
     incorrect = total - score
 
+    # review_mode：錯題重答模式
     if session.get('review_mode'):
         wrong_list = session.get('wrong_list', [])
         if not wrong_list:
             session.pop('review_mode')
         return render_template('review_result.html', wrong=len(wrong_list))
 
+    # 寫入個人錯題紀錄檔
     if session.get('wrong_list'):
         username = session['username']
         quiz_name = session.get('filename', '未知題庫')
@@ -270,6 +270,7 @@ def result():
                 f.write(f"[正解] {q.get('correct_text', '')}\n")
                 f.write(f"[時間] {q.get('answer_time', 0)} 秒\n\n")
 
+    # 更新分數歷史紀錄 (JSON)
     history_path = f"scores_{session['username']}.json"
     records = []
     if os.path.exists(history_path):
@@ -293,9 +294,9 @@ def result():
 
     return render_template('result.html', score=score, total=total, time_used=time_used, correct=correct, incorrect=incorrect)
 
-
 @app.route('/review')
 def review():
+    # 錯題重答
     if 'wrong_list' not in session or not session['wrong_list']:
         return redirect(url_for('index'))
     session['questions'] = session['wrong_list']
@@ -309,6 +310,7 @@ def review():
 
 @app.route('/history')
 def history():
+    # 歷史錯題列表
     if 'username' not in session:
         return redirect(url_for('login'))
 
@@ -352,5 +354,3 @@ def score():
 
 if __name__ == '__main__':
     app.run(debug=True)
-
-}
