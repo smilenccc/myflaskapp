@@ -1,8 +1,10 @@
+{
+type: uploaded file
+fileName: app.py
+fullContent:
 from flask import Flask, render_template, request, redirect, url_for, session, flash
 from flask_session import Session
 import os, re, random, time, datetime, json
-# 移除 secure_filename 的強制引用，改為手動處理
-# from werkzeug.utils import secure_filename 
 
 app = Flask(__name__)
 app.secret_key = 'secretkey'
@@ -43,28 +45,86 @@ def logout():
     return redirect(url_for('login'))
 
 def parse_questions(text):
-    pattern = r"\([A-D]\)\d+\..*?(?=(\n\([A-D]\)\d+\.|\Z))"
-    matches = re.finditer(pattern, text, re.DOTALL)
+    """
+    強化的解析邏輯 (區塊切割法)：
+    1. 清除雜訊 
+    2. 使用 regex 定位所有題目的「開頭」：(答案)題號.題目
+       - 支援括號、題號、點號之間的任意空白 (包括無空白)
+    3. 兩個題目開頭之間的文字，全部歸給上一題，再從中解析選項
+    """
     questions = []
-    for match in matches:
-        block = match.group(0).strip()
-        lines = block.split('\n')
-        first_line = lines[0]
-        options = lines[1:]
-        correct_match = re.match(r"\(([A-D])\)(\d+)\.(.*)", first_line)
-        if not correct_match or len(options) != 4:
-            continue
-        answer = correct_match.group(1)
-        index = int(correct_match.group(2))
-        qtext = correct_match.group(3).strip()
-        qdata = {
-            'index': index,
-            'question': qtext,
-            'options': {opt[1]: opt[3:].strip() for opt in options if re.match(r"\([A-D]\)", opt)},
-            'answer': answer,
-            'full': block
-        }
-        questions.append(qdata)
+    
+    # 1. 清除雜訊
+    text = re.sub(r'\', '', text)
+    
+    # 2. 定義題目開頭的 Regex
+    # ^\s* : 行首允許空白
+    # \(([A-D])\) : 抓取答案 (A)~(D)
+    # \s* : 允許答案後有空白 (關鍵！解決 (B) 1. 和 (B)1. 的差異)
+    # (\d+)     : 抓取題號
+    # \.        : 抓取點號
+    # \s* : 允許點號後有空白 (關鍵！解決 1.納 和 1. 納 的差異)
+    # (.*)      : 抓取同一行剩餘的題目文字
+    q_start_pattern = re.compile(r'^\s*\(([A-D])\)\s*(\d+)\.\s*(.*)', re.MULTILINE)
+    
+    # 找出所有題目的起始位置
+    matches = list(q_start_pattern.finditer(text))
+    
+    for i, match in enumerate(matches):
+        answer = match.group(1)       # 正解
+        index = int(match.group(2))   # 題號
+        title_start = match.group(3).strip() # 題目第一行
+        
+        # 決定這個題目的「結束位置」 (即下一題的開始，或是檔案結尾)
+        start_pos = match.start()
+        if i < len(matches) - 1:
+            end_pos = matches[i+1].start()
+        else:
+            end_pos = len(text)
+            
+        # 取得這一題的完整原始區塊 (包含換行、選項等)
+        # 我們跳過 match 的第一行(已經被 regex 抓了)，只取後面的內容來找選項
+        full_block = text[start_pos:end_pos]
+        content_block = text[match.end():end_pos]
+        
+        # 3. 在內容區塊中解析選項
+        # 預設題目內容是第一行，如果下面還有文字但在 (A) 之前，都算題目
+        q_content = title_start
+        options = {}
+        
+        # 將區塊切成行
+        lines = [line.strip() for line in content_block.split('\n') if line.strip()]
+        
+        current_part = 'QUESTION' # 狀態標記：目前正在讀取 題目 還是 選項
+        
+        for line in lines:
+            # 檢查這行是不是選項開頭 (A), (B), (C), (D)
+            # 這裡也允許括號後有空白，例如 (A) 選項內容
+            opt_match = re.match(r'^\(([A-D])\)\s*(.*)', line)
+            
+            if opt_match:
+                # 發現新選項，切換狀態
+                opt_label = opt_match.group(1)
+                opt_text = opt_match.group(2).strip()
+                options[opt_label] = opt_text
+                current_part = opt_label # 標記現在正在讀取哪個選項
+            else:
+                # 這行不是選項開頭，代表是上一部分的延續 (多行題目 或 多行選項)
+                if current_part == 'QUESTION':
+                    q_content += " " + line
+                elif current_part in ['A', 'B', 'C', 'D']:
+                    options[current_part] += " " + line
+
+        # 檢查是否完整 (通常要有四個選項，但也容許少許例外以免程式崩潰)
+        if len(options) >= 2: # 至少有兩個選項才算一題
+            questions.append({
+                'index': index,
+                'question': q_content,
+                'options': options,
+                'answer': answer,
+                'full': full_block.strip()
+            })
+            
     return questions
 
 @app.route('/index', methods=['GET', 'POST'])
@@ -73,25 +133,20 @@ def index():
         return redirect(url_for('login'))
 
     uploaded_files = [f for f in os.listdir(app.config['UPLOAD_FOLDER']) if f.startswith('[解析]') and f.endswith('.txt')]
-    uploaded_files.sort() # 讓檔案按名稱排序，方便查找
+    uploaded_files.sort()
     error = None
 
     if request.method == 'POST':
         action = request.form.get('action')
 
-        # === 處理檔案上傳 ===
         if action == 'upload':
             if session['role'] == 'admin':
                 quizfile = request.files.get('quizfile')
                 if quizfile and quizfile.filename:
-                    # === 修改重點：不再使用 secure_filename，保留中文 ===
                     filename = quizfile.filename
-                    
-                    # 簡單防護：避免路徑攻擊 (例如 ../../hack.txt)
-                    if '/' in filename:
-                        filename = filename.split('/')[-1]
-                    if '\\' in filename:
-                        filename = filename.split('\\')[-1]
+                    # 簡單過濾路徑符號
+                    if '/' in filename: filename = filename.split('/')[-1]
+                    if '\\' in filename: filename = filename.split('\\')[-1]
                         
                     path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
                     quizfile.save(path)
@@ -102,7 +157,6 @@ def index():
             else:
                 flash("權限不足，無法上傳", 'error')
 
-        # === 處理開始測驗 ===
         elif action == 'start':
             selected_file = request.form.get('selected_file')
             q_range = request.form.get('q_range', '')
@@ -110,22 +164,22 @@ def index():
             time_limit = request.form.get('time_limit', type=int, default=0)
 
             if not selected_file:
-                # 這裡也可以改用 flash，但為了相容舊版 template 錯誤顯示，保留 error 變數
-                error = "請選擇一個題庫檔案"
                 flash("請選擇一個題庫檔案", 'error')
             else:
                 session['filename'] = selected_file
                 full_path = os.path.join(app.config['UPLOAD_FOLDER'], selected_file)
+                
+                questions = []
                 try:
                     with open(full_path, encoding='utf-8') as f:
-                        questions = parse_questions(f.read())
+                        content = f.read()
+                        questions = parse_questions(content)
                 except Exception as e:
-                    flash(f"無法讀取題庫：{e}", 'error')
+                    flash(f"讀取失敗：{e}", 'error')
                     return render_template('index.html', files=uploaded_files, error=error, role=session['role'])
 
                 if not questions:
-                    error = "題庫解析失敗或為空"
-                    flash("題庫解析失敗或為空", 'error')
+                    flash("題庫解析失敗或為空 (請檢查檔案內容格式)", 'error')
                 else:
                     if '-' in q_range:
                         try:
@@ -133,6 +187,7 @@ def index():
                             questions = [q for q in questions if start <= q['index'] <= end]
                         except:
                             pass
+                    
                     if q_count and q_count < len(questions):
                         questions = random.sample(questions, q_count)
                     
@@ -195,26 +250,24 @@ def result():
     correct = score
     incorrect = total - score
 
-    # === 錯題重答模式 ===
     if session.get('review_mode'):
         wrong_list = session.get('wrong_list', [])
         if not wrong_list:
             session.pop('review_mode')
         return render_template('review_result.html', wrong=len(wrong_list))
 
-    # === 正常測驗模式 ===
     if session.get('wrong_list'):
         username = session['username']
         quiz_name = session.get('filename', '未知題庫')
         with open(f'quiz_result_{username}.txt', 'a', encoding='utf-8') as f:
             f.write(f"\n==== 題庫：{quiz_name} ====\n")
             for q in session['wrong_list']:
-                f.write(q['full'] + '\n')
+                full_text = q.get('full', q.get('question', ''))
+                f.write(full_text + '\n')
                 f.write(f"[選擇] {q.get('selected', '')}\n")
                 f.write(f"[正解] {q.get('correct_text', '')}\n")
                 f.write(f"[時間] {q.get('answer_time', 0)} 秒\n\n")
 
-    # === 儲存分數紀錄 ===
     history_path = f"scores_{session['username']}.json"
     records = []
     if os.path.exists(history_path):
@@ -267,7 +320,6 @@ def history():
                 if len(lines) >= 5:
                     q_text = lines[0]
                     opts = lines[1:5]
-                    # 簡單的解析防呆，避免格式跑掉報錯
                     selected = next((line for line in lines if line.startswith('[選擇]')), '')
                     correct = next((line for line in lines if line.startswith('[正解]')), '')
                     sec = next((line for line in lines if line.startswith('[時間]')), '')
@@ -278,7 +330,6 @@ def history():
                         'correct': correct.replace('[正解]', '').strip(),
                         'seconds': sec.replace('[時間]', '').strip()
                     })
-    # 讓新的紀錄顯示在最上面
     records.reverse()
     return render_template('history.html', records=records)
 
@@ -294,9 +345,10 @@ def score():
                 records = json.load(f)
             except:
                 records = []
-    # 讓新的紀錄顯示在最上面
     records.reverse()
     return render_template('score.html', records=records, username=session['username'])
 
 if __name__ == '__main__':
     app.run(debug=True)
+
+}
