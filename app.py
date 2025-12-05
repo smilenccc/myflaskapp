@@ -1,7 +1,8 @@
 from flask import Flask, render_template, request, redirect, url_for, session, flash
 from flask_session import Session
 import os, re, random, time, datetime, json
-from werkzeug.utils import secure_filename
+# 移除 secure_filename 的強制引用，改為手動處理
+# from werkzeug.utils import secure_filename 
 
 app = Flask(__name__)
 app.secret_key = 'secretkey'
@@ -72,6 +73,7 @@ def index():
         return redirect(url_for('login'))
 
     uploaded_files = [f for f in os.listdir(app.config['UPLOAD_FOLDER']) if f.startswith('[解析]') and f.endswith('.txt')]
+    uploaded_files.sort() # 讓檔案按名稱排序，方便查找
     error = None
 
     if request.method == 'POST':
@@ -82,7 +84,15 @@ def index():
             if session['role'] == 'admin':
                 quizfile = request.files.get('quizfile')
                 if quizfile and quizfile.filename:
-                    filename = secure_filename(quizfile.filename)
+                    # === 修改重點：不再使用 secure_filename，保留中文 ===
+                    filename = quizfile.filename
+                    
+                    # 簡單防護：避免路徑攻擊 (例如 ../../hack.txt)
+                    if '/' in filename:
+                        filename = filename.split('/')[-1]
+                    if '\\' in filename:
+                        filename = filename.split('\\')[-1]
+                        
                     path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
                     quizfile.save(path)
                     flash(f'題庫 "{filename}" 上傳成功！', 'success')
@@ -290,4 +300,3 @@ def score():
 
 if __name__ == '__main__':
     app.run(debug=True)
-
