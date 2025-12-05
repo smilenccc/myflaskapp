@@ -1,7 +1,3 @@
-{
-type: uploaded file
-fileName: app.py
-fullContent:
 from flask import Flask, render_template, request, redirect, url_for, session, flash
 from flask_session import Session
 import os, re, random, time, datetime, json
@@ -352,4 +348,3 @@ def score():
 if __name__ == '__main__':
     app.run(debug=True)
 
-}
