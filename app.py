@@ -71,6 +71,74 @@ def index():
     if 'username' not in session:
         return redirect(url_for('login'))
 
+    # 取得目前已上傳的題庫列表
+    uploaded_files = [f for f in os.listdir(app.config['UPLOAD_FOLDER']) if f.startswith('[解析]') and f.endswith('.txt')]
+    error = None
+
+    if request.method == 'POST':
+        action = request.form.get('action')  # 判斷使用者按了什麼按鈕
+
+        # === 處理檔案上傳 ===
+        if action == 'upload':
+            if session['role'] == 'admin':
+                quizfile = request.files.get('quizfile')
+                if quizfile and quizfile.filename:
+                    filename = secure_filename(quizfile.filename)
+                    quizfile.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+                    # 上傳成功後重新導向回首頁，讓下拉選單更新
+                    return redirect(url_for('index'))
+                else:
+                    error = "請選擇要上傳的檔案"
+            else:
+                error = "權限不足，無法上傳"
+
+        # === 處理開始測驗 ===
+        elif action == 'start':
+            selected_file = request.form.get('selected_file')
+            q_range = request.form.get('q_range', '')
+            q_count = request.form.get('q_count', type=int)
+            time_limit = request.form.get('time_limit', type=int, default=0)
+
+            if not selected_file:
+                error = "請選擇一個題庫檔案"
+            else:
+                session['filename'] = selected_file
+                full_path = os.path.join(app.config['UPLOAD_FOLDER'], selected_file)
+                try:
+                    with open(full_path, encoding='utf-8') as f:
+                        questions = parse_questions(f.read())
+                except Exception as e:
+                    return render_template('index.html', files=uploaded_files, error=f"無法讀取題庫：{e}", role=session['role'])
+
+                if not questions:
+                    error = "題庫解析失敗或為空"
+                else:
+                    # 篩選題目範圍
+                    if '-' in q_range:
+                        try:
+                            start, end = map(int, q_range.split('-'))
+                            questions = [q for q in questions if start <= q['index'] <= end]
+                        except:
+                            pass
+                    # 隨機選題
+                    if q_count and q_count < len(questions):
+                        questions = random.sample(questions, q_count)
+                    
+                    # 初始化測驗 Session
+                    session['questions'] = questions
+                    session['current'] = 0
+                    session['start_time'] = time.time()
+                    session['score'] = 0
+                    session['total'] = len(questions)
+                    session['wrong_list'] = []
+                    session['time_limit'] = time_limit  # 記錄限時設定
+                    session.pop('review_mode', None)
+                    return redirect(url_for('quiz'))
+
+    return render_template('index.html', files=uploaded_files, error=error, role=session['role'])
+    if 'username' not in session:
+        return redirect(url_for('login'))
+
     uploaded_files = [f for f in os.listdir(app.config['UPLOAD_FOLDER']) if f.startswith('[解析]') and f.endswith('.txt')]
     error = None
 

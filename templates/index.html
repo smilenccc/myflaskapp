@@ -20,21 +20,47 @@
             box-shadow: 0 0 10px rgba(0,0,0,0.2);
         }
 
-        h2, h3 {
-            color: #333;
-        }
+        h2 { color: #333; }
 
+        /* 一般輸入框樣式 */
         input[type="text"],
         input[type="number"],
-        input[type="file"],
         select {
             width: 100%;
-            padding: 8px;
+            padding: 10px;
             margin-bottom: 15px;
             border-radius: 5px;
             border: 1px solid #ccc;
             font-size: 1rem;
+            box-sizing: border-box; /* 確保 padding 不會撐開寬度 */
         }
+
+        /* 檔案上傳區域的 Flex 排版 */
+        .upload-group {
+            display: flex;
+            gap: 10px; /* 輸入框和按鈕之間的間距 */
+            margin-bottom: 15px;
+            align-items: center;
+        }
+
+        .upload-group input[type="file"] {
+            flex: 1; /* 讓檔案選擇框佔據剩餘空間 */
+            padding: 8px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+
+        .upload-btn {
+            padding: 10px 20px;
+            background-color: #17a2b8; /* 青色 */
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 1rem;
+            white-space: nowrap; /* 防止文字換行 */
+        }
+        .upload-btn:hover { background-color: #138496; }
 
         label {
             display: block;
@@ -47,7 +73,7 @@
             display: flex;
             flex-direction: column;
             gap: 10px;
-            margin-top: 10px;
+            margin-top: 20px;
         }
 
         .full-width {
@@ -59,37 +85,22 @@
             text-align: center;
             text-decoration: none;
             box-sizing: border-box;
+            cursor: pointer;
         }
 
-        .green {
-            background-color: #28a745;
-            color: white;
-        }
+        .green { background-color: #28a745; color: white; }
+        .green:hover { background-color: #218838; }
 
-        .green:hover {
-            background-color: #218838;
-        }
+        .blue { background-color: #007bff; color: white; }
+        .blue:hover { background-color: #0056b3; }
 
-        .blue {
-            background-color: #007bff;
-            color: white;
-        }
-
-        .blue:hover {
-            background-color: #0056b3;
-        }
-
-        .red {
-            background-color: #dc3545;
-            color: white;
-        }
-
-        .red:hover {
-            background-color: #c82333;
-        }
+        .red { background-color: #dc3545; color: white; }
+        .red:hover { background-color: #c82333; }
 
         @media (max-width: 600px) {
             body { padding: 10px; }
+            .upload-group { flex-direction: column; align-items: stretch; }
+            .upload-btn { width: 100%; }
         }
     </style>
 </head>
@@ -99,37 +110,42 @@
 
     <form method="post" enctype="multipart/form-data">
 
+        {% if role == 'admin' %}
+        <label for="quizfile">上傳新的題庫檔案：</label>
+        <div class="upload-group">
+            <input type="file" name="quizfile" id="quizfile">
+            <button type="submit" name="action" value="upload" class="upload-btn">上傳</button>
+        </div>
+        <hr>
+        {% endif %}
+
         <label for="selected_file">選擇已上傳的題庫：</label>
-        <select name="selected_file" id="selected_file" required>
+        <select name="selected_file" id="selected_file">
             <option value="">-- 請選擇題庫 --</option>
             {% for file in files %}
                 <option value="{{ file }}">{{ file }}</option>
             {% endfor %}
         </select>
 
-        {% if role == 'admin' %}
-        <label for="quizfile">上傳新的題庫檔案：</label>
-        <input type="file" name="quizfile" id="quizfile">
-        {% endif %}
-
         <label for="q_range">出題範圍（例如：1-50）</label>
-        <input type="text" name="q_range" id="q_range">
+        <input type="text" name="q_range" id="q_range" placeholder="留空則全選">
 
-        <label for="q_count">出題總數（預設 50 題）</label>
+        <label for="q_count">出題總數</label>
         <input type="number" name="q_count" id="q_count" value="50">
 
         <label for="time_limit">每題限時（秒，0 表示不限）</label>
         <input type="number" name="time_limit" id="time_limit" value="0">
 
         <div class="button-group">
-            <button type="submit" class="full-width green">開始測驗</button>
+            <button type="submit" name="action" value="start" class="full-width green">開始測驗</button>
+            
             <a href="{{ url_for('history') }}" class="full-width blue">歷史錯題</a>
             <a href="{{ url_for('score') }}" class="full-width blue">成績紀錄</a>
             <a href="{{ url_for('logout') }}" class="full-width red">登出</a>
         </div>
 
         {% if error %}
-        <p style="color:red;">{{ error }}</p>
+        <p style="color:red; text-align: center; margin-top: 10px;">{{ error }}</p>
         {% endif %}
     </form>
 </div>
