@@ -1,5 +1,3 @@
-# 原本是 from flask import Flask, render_template, ...
-# 請改成（加入 flash）：
 from flask import Flask, render_template, request, redirect, url_for, session, flash
 from flask_session import Session
 import os, re, random, time, datetime, json
@@ -73,31 +71,26 @@ def index():
     if 'username' not in session:
         return redirect(url_for('login'))
 
-    # 取得目前已上傳的題庫列表
     uploaded_files = [f for f in os.listdir(app.config['UPLOAD_FOLDER']) if f.startswith('[解析]') and f.endswith('.txt')]
     error = None
 
     if request.method == 'POST':
-        action = request.form.get('action')  # 判斷使用者按了什麼按鈕
+        action = request.form.get('action')
 
         # === 處理檔案上傳 ===
         if action == 'upload':
-        if session['role'] == 'admin':
-            quizfile = request.files.get('quizfile')
-            if quizfile and quizfile.filename:
-                filename = secure_filename(quizfile.filename)
-                path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-                quizfile.save(path)
-
-                # 加入這行：發送成功訊息
-                flash(f'題庫 "{filename}" 上傳成功！', 'success')
-
-                return redirect(url_for('index'))
+            if session['role'] == 'admin':
+                quizfile = request.files.get('quizfile')
+                if quizfile and quizfile.filename:
+                    filename = secure_filename(quizfile.filename)
+                    path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+                    quizfile.save(path)
+                    flash(f'題庫 "{filename}" 上傳成功！', 'success')
+                    return redirect(url_for('index'))
+                else:
+                    flash("請選擇要上傳的檔案", 'error')
             else:
-                # 改用 flash 顯示錯誤 (原本是 error=...)
-                flash("請選擇要上傳的檔案", 'error')
-        else:
-            flash("權限不足，無法上傳", 'error')
+                flash("權限不足，無法上傳", 'error')
 
         # === 處理開始測驗 ===
         elif action == 'start':
@@ -107,7 +100,9 @@ def index():
             time_limit = request.form.get('time_limit', type=int, default=0)
 
             if not selected_file:
+                # 這裡也可以改用 flash，但為了相容舊版 template 錯誤顯示，保留 error 變數
                 error = "請選擇一個題庫檔案"
+                flash("請選擇一個題庫檔案", 'error')
             else:
                 session['filename'] = selected_file
                 full_path = os.path.join(app.config['UPLOAD_FOLDER'], selected_file)
@@ -115,82 +110,31 @@ def index():
                     with open(full_path, encoding='utf-8') as f:
                         questions = parse_questions(f.read())
                 except Exception as e:
-                    return render_template('index.html', files=uploaded_files, error=f"無法讀取題庫：{e}", role=session['role'])
+                    flash(f"無法讀取題庫：{e}", 'error')
+                    return render_template('index.html', files=uploaded_files, error=error, role=session['role'])
 
                 if not questions:
                     error = "題庫解析失敗或為空"
+                    flash("題庫解析失敗或為空", 'error')
                 else:
-                    # 篩選題目範圍
                     if '-' in q_range:
                         try:
                             start, end = map(int, q_range.split('-'))
                             questions = [q for q in questions if start <= q['index'] <= end]
                         except:
                             pass
-                    # 隨機選題
                     if q_count and q_count < len(questions):
                         questions = random.sample(questions, q_count)
                     
-                    # 初始化測驗 Session
                     session['questions'] = questions
                     session['current'] = 0
                     session['start_time'] = time.time()
                     session['score'] = 0
                     session['total'] = len(questions)
                     session['wrong_list'] = []
-                    session['time_limit'] = time_limit  # 記錄限時設定
+                    session['time_limit'] = time_limit
                     session.pop('review_mode', None)
                     return redirect(url_for('quiz'))
-
-    return render_template('index.html', files=uploaded_files, error=error, role=session['role'])
-    if 'username' not in session:
-        return redirect(url_for('login'))
-
-    uploaded_files = [f for f in os.listdir(app.config['UPLOAD_FOLDER']) if f.startswith('[解析]') and f.endswith('.txt')]
-    error = None
-
-    if request.method == 'POST':
-        selected_file = request.form.get('selected_file')
-        quizfile = request.files.get('quizfile')
-        q_range = request.form.get('q_range', '')
-        q_count = request.form.get('q_count', type=int)
-        time_limit = request.form.get('time_limit', type=int, default=0)
-
-        if session['role'] == 'admin' and quizfile and quizfile.filename:
-            filename = secure_filename(quizfile.filename)
-            quizfile.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
-            selected_file = filename
-
-        if not selected_file:
-            error = "請選擇或上傳一個題庫檔案"
-        else:
-            session['filename'] = selected_file
-            full_path = os.path.join(app.config['UPLOAD_FOLDER'], selected_file)
-            try:
-                with open(full_path, encoding='utf-8') as f:
-                    questions = parse_questions(f.read())
-            except Exception as e:
-                return render_template('index.html', files=uploaded_files, error=f"無法讀取題庫：{e}", role=session['role'])
-
-            if not questions:
-                error = "題庫解析失敗或為空"
-            else:
-                if '-' in q_range:
-                    try:
-                        start, end = map(int, q_range.split('-'))
-                        questions = [q for q in questions if start <= q['index'] <= end]
-                    except:
-                        pass
-                if q_count and q_count < len(questions):
-                    questions = random.sample(questions, q_count)
-                session['questions'] = questions
-                session['current'] = 0
-                session['start_time'] = time.time()
-                session['score'] = 0
-                session['total'] = len(questions)
-                session['wrong_list'] = []
-                session.pop('review_mode', None)
-                return redirect(url_for('quiz'))
 
     return render_template('index.html', files=uploaded_files, error=error, role=session['role'])
 
@@ -265,7 +209,11 @@ def result():
     records = []
     if os.path.exists(history_path):
         with open(history_path, encoding='utf-8') as f:
-            records = json.load(f)
+            try:
+                records = json.load(f)
+            except:
+                records = []
+    
     records.append({
         'quizfile': session.get('filename'),
         'score': score,
@@ -274,6 +222,7 @@ def result():
         'time_used': time_used,
         'timestamp': datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     })
+    
     with open(history_path, 'w', encoding='utf-8') as f:
         json.dump(records, f, ensure_ascii=False, indent=2)
 
@@ -308,6 +257,7 @@ def history():
                 if len(lines) >= 5:
                     q_text = lines[0]
                     opts = lines[1:5]
+                    # 簡單的解析防呆，避免格式跑掉報錯
                     selected = next((line for line in lines if line.startswith('[選擇]')), '')
                     correct = next((line for line in lines if line.startswith('[正解]')), '')
                     sec = next((line for line in lines if line.startswith('[時間]')), '')
@@ -318,6 +268,8 @@ def history():
                         'correct': correct.replace('[正解]', '').strip(),
                         'seconds': sec.replace('[時間]', '').strip()
                     })
+    # 讓新的紀錄顯示在最上面
+    records.reverse()
     return render_template('history.html', records=records)
 
 @app.route('/score')
@@ -328,8 +280,14 @@ def score():
     records = []
     if os.path.exists(history_path):
         with open(history_path, encoding='utf-8') as f:
-            records = json.load(f)
+            try:
+                records = json.load(f)
+            except:
+                records = []
+    # 讓新的紀錄顯示在最上面
+    records.reverse()
     return render_template('score.html', records=records, username=session['username'])
 
 if __name__ == '__main__':
     app.run(debug=True)
+
