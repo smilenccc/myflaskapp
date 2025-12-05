@@ -1,4 +1,6 @@
-from flask import Flask, render_template, request, redirect, url_for, session
+# 原本是 from flask import Flask, render_template, ...
+# 請改成（加入 flash）：
+from flask import Flask, render_template, request, redirect, url_for, session, flash
 from flask_session import Session
 import os, re, random, time, datetime, json
 from werkzeug.utils import secure_filename
@@ -80,17 +82,22 @@ def index():
 
         # === 處理檔案上傳 ===
         if action == 'upload':
-            if session['role'] == 'admin':
-                quizfile = request.files.get('quizfile')
-                if quizfile and quizfile.filename:
-                    filename = secure_filename(quizfile.filename)
-                    quizfile.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
-                    # 上傳成功後重新導向回首頁，讓下拉選單更新
-                    return redirect(url_for('index'))
-                else:
-                    error = "請選擇要上傳的檔案"
+        if session['role'] == 'admin':
+            quizfile = request.files.get('quizfile')
+            if quizfile and quizfile.filename:
+                filename = secure_filename(quizfile.filename)
+                path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+                quizfile.save(path)
+
+                # 加入這行：發送成功訊息
+                flash(f'題庫 "{filename}" 上傳成功！', 'success')
+
+                return redirect(url_for('index'))
             else:
-                error = "權限不足，無法上傳"
+                # 改用 flash 顯示錯誤 (原本是 error=...)
+                flash("請選擇要上傳的檔案", 'error')
+        else:
+            flash("權限不足，無法上傳", 'error')
 
         # === 處理開始測驗 ===
         elif action == 'start':

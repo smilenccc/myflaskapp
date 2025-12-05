@@ -102,12 +102,39 @@
             .upload-group { flex-direction: column; align-items: stretch; }
             .upload-btn { width: 100%; }
         }
+		/* 新增訊息框樣式 */
+    .alert {
+        padding: 15px;
+        margin-bottom: 20px;
+        border: 1px solid transparent;
+        border-radius: 4px;
+        text-align: center;
+    }
+    .alert-success {
+        color: #155724;
+        background-color: #d4edda;
+        border-color: #c3e6cb;
+    }
+    .alert-error {
+        color: #721c24;
+        background-color: #f8d7da;
+        border-color: #f5c6cb;
+    }
     </style>
 </head>
 <body>
 <div class="container">
     <h2>測驗初始設定</h2>
 
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        {% for category, message in messages %}
+          <div class="alert alert-{{ category }}">
+            {{ message }}
+          </div>
+        {% endfor %}
+      {% endif %}
+    {% endwith %}
     <form method="post" enctype="multipart/form-data">
 
         {% if role == 'admin' %}
