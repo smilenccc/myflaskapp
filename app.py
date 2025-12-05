@@ -1,3 +1,7 @@
+{
+type: uploaded file
+fileName: app.py
+fullContent:
 from flask import Flask, render_template, request, redirect, url_for, session, flash
 from flask_session import Session
 import os, re, random, time, datetime, json
@@ -50,8 +54,9 @@ def parse_questions(text):
     """
     questions = []
     
-    # 1. 清除雜訊 (修正這裡的語法錯誤)
-    # 使用 r'\' 來匹配 
+    # === 修正重點：修復原本導致 SyntaxError 的正規表示式 ===
+    # 目標：移除 
+    # Python regex 中，中括號 [] 是特殊字元，必須用反斜線 \[ \] 轉義
     text = re.sub(r'\', '', text)
     
     # 2. 定義題目開頭的 Regex
@@ -80,12 +85,12 @@ def parse_questions(text):
             end_pos = len(text)
             
         # 取得這一題的完整原始區塊 (包含換行、選項等)
+        # 我們跳過 match 的第一行(已經被 regex 抓了)，只取後面的內容來找選項
         full_block = text[start_pos:end_pos]
-        # 內容區塊 (不含標頭的第一行)
         content_block = text[match.end():end_pos]
         
         # 3. 在內容區塊中解析選項
-        # 預設題目內容是第一行
+        # 預設題目內容是第一行，如果下面還有文字但在 (A) 之前，都算題目
         q_content = title_start
         options = {}
         
@@ -348,3 +353,4 @@ def score():
 if __name__ == '__main__':
     app.run(debug=True)
 
+}
