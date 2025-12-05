@@ -54,7 +54,8 @@ def parse_questions(text):
     """
     questions = []
     
-    # 1. 清除雜訊
+    # 1. 清除雜訊 (修正這裡的語法錯誤)
+    # 使用 r'\' 來匹配 
     text = re.sub(r'\', '', text)
     
     # 2. 定義題目開頭的 Regex
@@ -83,12 +84,12 @@ def parse_questions(text):
             end_pos = len(text)
             
         # 取得這一題的完整原始區塊 (包含換行、選項等)
-        # 我們跳過 match 的第一行(已經被 regex 抓了)，只取後面的內容來找選項
         full_block = text[start_pos:end_pos]
+        # 內容區塊 (不含標頭的第一行)
         content_block = text[match.end():end_pos]
         
         # 3. 在內容區塊中解析選項
-        # 預設題目內容是第一行，如果下面還有文字但在 (A) 之前，都算題目
+        # 預設題目內容是第一行
         q_content = title_start
         options = {}
         
@@ -115,8 +116,8 @@ def parse_questions(text):
                 elif current_part in ['A', 'B', 'C', 'D']:
                     options[current_part] += " " + line
 
-        # 檢查是否完整 (通常要有四個選項，但也容許少許例外以免程式崩潰)
-        if len(options) >= 2: # 至少有兩個選項才算一題
+        # 檢查是否完整 (至少要有兩個選項才算一題，避免格式錯誤導致崩潰)
+        if len(options) >= 2:
             questions.append({
                 'index': index,
                 'question': q_content,
